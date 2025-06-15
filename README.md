@@ -12,9 +12,21 @@ A comprehensive web scraper for Google Flights built with Python and Playwright.
 - **Error Handling**: Robust error handling with retry mechanisms
 - **Logging**: Detailed logging for debugging and monitoring
 - **CLI Interface**: Easy-to-use command-line interface
+- **🆕 MCP Server**: Model Context Protocol server for AI assistant integration
+- **📦 Package Architecture**: Professional package structure for distribution
 
 ## Installation
 
+### Option 1: Package Installation (Recommended)
+```bash
+# Install from source
+pip install -e .
+
+# Install Playwright browsers
+playwright install chromium
+```
+
+### Option 2: Development Installation
 1. **Clone or download this repository**
 
 2. **Install Python dependencies:**
@@ -27,9 +39,23 @@ A comprehensive web scraper for Google Flights built with Python and Playwright.
    playwright install chromium
    ```
 
+### MCP Server Dependencies
+For MCP server functionality, ensure you have:
+```bash
+pip install fastmcp>=0.2.0
+```
+
 ## Usage
 
-### Basic Commands
+### 🚀 Quick Start
+
+The Google Flights Scraper can be used in three ways:
+
+1. **CLI Tool** - Direct command-line usage
+2. **Python Package** - Import and use in your Python code
+3. **MCP Server** - AI assistant integration via Model Context Protocol
+
+### CLI Usage
 
 **One-way flight search:**
 ```bash
@@ -50,6 +76,60 @@ python main.py scrape LAX NYC 2025-07-01 --format json --output flights.json
 ```bash
 python main.py scrape LAX NYC 2025-07-01 --format csv --output flights.csv
 ```
+
+### Python Package Usage
+
+```python
+from flight_scraper import scrape_flights_async, SearchCriteria, TripType
+
+# Create search criteria
+criteria = SearchCriteria(
+    origin="JFK",
+    destination="LAX",
+    departure_date="2025-07-01",
+    trip_type=TripType.ONE_WAY,
+    max_results=10
+)
+
+# Search flights
+result = await scrape_flights_async(criteria)
+if result.success:
+    print(f"Found {len(result.flights)} flights")
+    for flight in result.flights:
+        print(f"{flight.price} - {flight.total_duration}")
+```
+
+### 🔧 MCP Server Usage
+
+Start the MCP server for AI assistant integration:
+
+```bash
+# Basic server startup
+python run_mcp_server.py
+
+# Custom configuration
+python run_mcp_server.py --host 0.0.0.0 --port 8000 --debug
+```
+
+The MCP server provides three tools:
+- `search_flights` - Search for flights between airports
+- `get_airport_info` - Get airport code information
+- `get_scraper_status` - Check scraper health and configuration
+
+**Example MCP tool usage:**
+```json
+{
+  "tool": "search_flights",
+  "arguments": {
+    "origin": "JFK",
+    "destination": "LAX",
+    "departure_date": "2025-07-01",
+    "max_results": 5
+  }
+}
+```
+
+For detailed MCP server documentation, see [`MCP_SERVER_GUIDE.md`](MCP_SERVER_GUIDE.md).
 
 ### Command Line Options
 
@@ -91,14 +171,28 @@ python main.py scrape LAX NYC 2025-07-01 \
 
 ```
 flight-scrapper-2/
-├── main.py              # CLI interface and main entry point
-├── scraper.py           # Core scraping logic using Playwright
-├── models.py            # Data models and type definitions
-├── utils.py             # Utility functions and helpers
-├── config.py            # Configuration settings and constants
-├── requirements.txt     # Python dependencies
-├── README.md           # This documentation
-└── flight_scraper.log  # Log file (created automatically)
+├── flight_scraper/              # Main package directory
+│   ├── __init__.py             # Package initialization and exports
+│   ├── core/                   # Core scraping functionality
+│   │   ├── __init__.py
+│   │   ├── scraper.py          # Main scraper implementation
+│   │   ├── models.py           # Data models and types
+│   │   └── config.py           # Configuration settings
+│   ├── cli/                    # Command-line interface
+│   │   ├── __init__.py
+│   │   └── main.py             # CLI implementation
+│   ├── mcp/                    # MCP server implementation
+│   │   ├── __init__.py
+│   │   └── server.py           # MCP server and tools
+│   └── utils.py                # Shared utilities
+├── main.py                     # Legacy CLI entry point
+├── run_mcp_server.py          # MCP server startup script
+├── setup.py                   # Package installation configuration
+├── requirements.txt           # Python dependencies
+├── README.md                  # This documentation
+├── MCP_SERVER_GUIDE.md        # Detailed MCP server documentation
+└── examples/                  # Usage examples (created on install)
+    └── mcp_client_example.py  # MCP client integration example
 ```
 
 ## How It Works

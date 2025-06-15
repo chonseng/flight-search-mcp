@@ -1,8 +1,57 @@
+# =============================================================================
+# CORE SCRAPING DEPENDENCIES
+# =============================================================================
+
+# Web automation and browser control
 playwright==1.40.0
+
+# HTML parsing and processing
 beautifulsoup4==4.12.2
 lxml==4.9.3
+
+# Date and time utilities
 python-dateutil==2.8.2
-loguru==0.7.2
-pydantic==2.5.0
+
+# =============================================================================
+# CLI INTERFACE DEPENDENCIES
+# =============================================================================
+
+# Command-line interface framework
 typer==0.9.0
+
+# Rich terminal output and formatting
 rich==13.7.0
+
+# =============================================================================
+# DATA VALIDATION AND MODELING
+# =============================================================================
+
+# Data validation and serialization
+pydantic==2.5.0
+
+# =============================================================================
+# LOGGING AND MONITORING
+# =============================================================================
+
+# Advanced logging with rotation and formatting
+loguru==0.7.2
+
+# =============================================================================
+# MCP SERVER DEPENDENCIES
+# =============================================================================
+
+# Model Context Protocol server framework
+fastmcp>=0.2.0
+
+# =============================================================================
+# DEVELOPMENT DEPENDENCIES (Optional - install with pip install -e .[dev])
+# =============================================================================
+
+# Testing framework
+# pytest>=7.0.0
+# pytest-asyncio>=0.21.0
+
+# Code formatting and linting
+# black>=23.0.0
+# flake8>=6.0.0
+# mypy>=1.0.0
