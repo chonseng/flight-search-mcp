@@ -206,7 +206,6 @@ class GoogleFlightsScraper:
                         'button:has-text("Explore")',
                         'button[aria-label*="Search"]',
                         'button:has-text("Search")',
-                        '.VfPpkd-LgbsSe[role="button"]'
                     ]
                     
                     search_clicked = False
@@ -241,7 +240,6 @@ class GoogleFlightsScraper:
                 
                 # Try more aggressive search button clicking
                 additional_selectors = [
-                    'button[jsname="b9S8pb"]',
                     'div[role="button"]:has-text("Search")',
                     'div[role="button"]:has-text("Explore")',
                 ]
@@ -270,72 +268,141 @@ class GoogleFlightsScraper:
             logger.error(f"Failed to trigger search: {str(e)}")
             raise ScrapingError(f"Search trigger failed: {str(e)}")
     
-    async def extract_flight_data(self, max_results: int = 50) -> List[FlightOffer]:
+    async def extract_flight_data(self, criteria: SearchCriteria, max_results: int = 50) -> List[FlightOffer]:
         """Extract flight information from the results page."""
         try:
             logger.info("Extracting flight data...")
             
-            # Wait longer and try multiple selectors for flight results
-            results_selectors = [
-                '[role="listitem"]',
-                '[data-testid="flight-offer"]',
-                '.pIav2d',
-                '.yR1fYc',
-                '.Rk10dc',
-                'li[jsname]',
-                '[jsname*="flight"]'
-            ]
+            # Skip clicking cheapest button - use direct UL targeting approach
+            logger.info("Using direct UL targeting strategy (skipping cheapest button)")
             
-            results_found = False
-            working_selector = None
-            for selector in results_selectors:
-                if await wait_for_element(self.page, selector, timeout=20000):
-                    working_selector = selector
-                    results_found = True
-                    logger.info(f"Found flight results with selector: {selector}")
-                    break
+            # Use specific UL targeting strategy based on user's guidance
+            logger.info("Using specific UL targeting strategy...")
+            await random_delay(3, 5)  # Give time for content to load
             
-            if not results_found:
-                # Try to get page content for debugging
-                try:
-                    page_content = await self.page.content()
-                    logger.debug(f"Page content length: {len(page_content)}")
-                    # Check if page has any content
-                    if len(page_content) < 1000:
-                        logger.warning("Page appears to be nearly empty after search")
-                    else:
-                        logger.warning("Page has content but no flight result elements found")
-                except:
-                    pass
-                logger.warning("No flight results found")
+            # Find all UL elements within tabpanel using JavaScript
+            try:
+                logger.info("Finding all UL elements within div[role=tabpanel]...")
+                
+                ul_info = await self.page.evaluate('''
+                () => {
+                    const uls = document.querySelectorAll("div[role=tabpanel] ul");
+                    return {
+                        count: uls.length,
+                        ulInfo: Array.from(uls).map((ul, index) => ({
+                            index: index,
+                            textLength: ul.innerText ? ul.innerText.length : 0,
+                            textPreview: ul.innerText ? ul.innerText.substring(0, 100) : "No text",
+                            liCount: ul.querySelectorAll('li').length
+                        }))
+                    };
+                }
+                ''')
+                
+                logger.info(f"🔍 Found {ul_info['count']} UL elements within tabpanel")
+                
+                for ul_data in ul_info['ulInfo']:
+                    logger.info(f"🔍 UL {ul_data['index'] + 1}: {ul_data['liCount']} li elements, text preview: {ul_data['textPreview']}...")
+                
+                if ul_info['count'] >= 4:
+                    logger.info("✅ Found 4+ UL elements - targeting 3rd and 4th for cheapest flights")
+                    
+                    # Extract flight data from 3rd and 4th UL elements (indices 2 and 3)
+                    target_ul_indices = [2, 3]  # 3rd and 4th UL elements
+                    
+                else:
+                    logger.warning(f"❌ Only found {ul_info['count']} UL elements, expected 4+")
+                    logger.info("Will try to extract from available UL elements")
+                    target_ul_indices = list(range(min(ul_info['count'], 4)))  # Use all available ULs
+                    
+            except Exception as e:
+                logger.error(f"Error finding UL elements: {e}")
                 return []
             
-            # Extract flight offers using the working selector and others
+            # Extract flight elements from target UL elements
             flights = []
-            all_selectors = [working_selector] + [s for s in results_selectors if s != working_selector]
             flight_elements = []
             
-            for selector in all_selectors:
+            for ul_index in target_ul_indices:
                 try:
-                    elements = await self.page.query_selector_all(selector)
-                    if elements:
-                        flight_elements.extend(elements)
-                        if len(flight_elements) >= max_results:
-                            break
-                except:
+                    logger.info(f"Extracting flights from UL {ul_index + 1}...")
+                    
+                    # Use JavaScript to get the specific UL and its li elements directly
+                    ul_data = await self.page.evaluate(f'''
+                    () => {{
+                        const uls = document.querySelectorAll("div[role=tabpanel] ul");
+                        if (uls.length > {ul_index}) {{
+                            const targetUl = uls[{ul_index}];
+                            const liElements = targetUl.querySelectorAll('li');
+                            return {{
+                                found: true,
+                                liCount: liElements.length,
+                                textContent: targetUl.innerText.substring(0, 200)
+                            }};
+                        }}
+                        return {{ found: false, liCount: 0, textContent: "" }};
+                    }}
+                    ''')
+                    
+                    if ul_data['found'] and ul_data['liCount'] > 0:
+                        logger.info(f"✅ Found {ul_data['liCount']} li elements in UL {ul_index + 1}")
+                        logger.info(f"🔍 UL {ul_index + 1} content preview: {ul_data['textContent']}...")
+                        
+                        # Use JavaScript to get handles to the li elements for data extraction
+                        li_handles = await self.page.evaluate_handle(f'''
+                        () => {{
+                            const uls = document.querySelectorAll("div[role=tabpanel] ul");
+                            if (uls.length > {ul_index}) {{
+                                return Array.from(uls[{ul_index}].querySelectorAll('li'));
+                            }}
+                            return [];
+                        }}
+                        ''')
+                        
+                        # Convert JS handles to Playwright element handles
+                        li_elements = await li_handles.evaluate('elements => elements')
+                        
+                        if isinstance(li_elements, list):
+                            # Get actual Playwright elements for each li
+                            for i in range(min(len(li_elements), max_results)):
+                                try:
+                                    # Use the index-based selector to get Playwright element handle
+                                    element = await self.page.query_selector(f'div[role="tabpanel"] ul:nth-child({ul_index + 1}) li:nth-child({i + 1})')
+                                    if element:
+                                        flight_elements.append(element)
+                                except Exception as e:
+                                    logger.debug(f"Error getting element {i} from UL {ul_index + 1}: {e}")
+                                    continue
+                        
+                        logger.info(f"✅ Successfully extracted {len([e for e in flight_elements if e])} elements from UL {ul_index + 1}")
+                        
+                    else:
+                        logger.warning(f"❌ No li elements found in UL {ul_index + 1}")
+                        
+                except Exception as e:
+                    logger.warning(f"Error extracting from UL {ul_index + 1}: {e}")
                     continue
+            
+            results_found = len(flight_elements) > 0
+            working_selector = f"3rd and 4th UL elements"
+            
+            if not results_found:
+                logger.warning("No flight results found")
+                return []
             
             # Remove duplicates by converting to set based on element handles
             unique_elements = list(dict.fromkeys(flight_elements))
             
             logger.info(f"Found {len(unique_elements)} flight elements")
             
+            # Extract flight data from the found elements
+            flights = []
             for i, element in enumerate(unique_elements[:max_results]):
                 try:
                     flight_data = await self.extract_single_flight(element)
                     if flight_data:
                         flights.append(flight_data)
-                        logger.debug(f"Extracted flight {i+1}: {flight_data.price}")
+                        logger.info(f"✅ Extracted flight {i+1}: {flight_data.price} - {flight_data.segments[0].airline}")
                 except Exception as e:
                     logger.warning(f"Failed to extract flight {i+1}: {str(e)}")
                     continue
@@ -353,11 +420,6 @@ class GoogleFlightsScraper:
             # Extract price with comprehensive selectors and debugging
             price_selectors = [
                 '[data-gs*="price"]',
-                '.YMlIz',  # Common price selector
-                '.f8F1md .YMlIz',
-                '.U3gSDe',
-                '.kZJXYc',  # Alternative price selector
-                '.BpkAoe',  # Another price selector
                 '[jsname*="price"]',
                 'span[aria-label*="dollars"]',
                 'span[aria-label*="price"]',
@@ -481,7 +543,7 @@ class GoogleFlightsScraper:
             await self.trigger_search()
             
             # Extract flight data
-            flights = await self.extract_flight_data(criteria.max_results)
+            flights = await self.extract_flight_data(criteria, criteria.max_results)
             
             execution_time = time.time() - start_time
             
