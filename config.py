@@ -17,6 +17,7 @@ SCRAPER_CONFIG = {
 # Google Flights URLs
 GOOGLE_FLIGHTS_URLS = {
     "base": "https://www.google.com/travel/flights?tfs=CBwQARoAQAFIAXABggELCP___________wGYAQI&tfu=KgIIAw",
+    "round_trip": "https://www.google.com/travel/flights?tfs=CBwQARoOagwIAhIIL20vMGQ5anIaDnIMCAISCC9tLzBkOWpyQAFIAXABggELCP___________wGYAQE&tfu=KgIIAg",
     "search": "https://www.google.com/travel/flights/search",
 }
 

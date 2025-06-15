@@ -90,12 +90,12 @@ class GoogleFlightsScraper:
         except Exception as e:
             logger.error(f"Error during cleanup: {str(e)}")
     
-    async def navigate_to_google_flights(self) -> None:
-        """Navigate to Google Flights homepage."""
+    async def navigate_to_google_flights(self, criteria: SearchCriteria) -> None:
+        """Navigate to Google Flights with appropriate URL based on search criteria."""
         try:
-            logger.info("Navigating to Google Flights...")
-            logger.info(f"Target URL: {GOOGLE_FLIGHTS_URLS['base']}")
-            await self.page.goto(GOOGLE_FLIGHTS_URLS["base"], wait_until="domcontentloaded")
+            url = GOOGLE_FLIGHTS_URLS["round_trip"] if criteria.trip_type == TripType.ROUND_TRIP else GOOGLE_FLIGHTS_URLS["base"]
+            logger.info(f"Navigating to Google Flights: {url}")
+            await self.page.goto(url, wait_until="domcontentloaded")
             logger.info("DOM content loaded, proceeding without waiting for network idle...")
             await random_delay(3, 5)  # Give time for page to stabilize
             logger.info("Successfully loaded Google Flights")
@@ -114,7 +114,7 @@ class GoogleFlightsScraper:
     async def fill_search_form(self, criteria: SearchCriteria) -> None:
         """Fill the flight search form with criteria."""
         try:
-            logger.info(f"Filling search form: {criteria.origin} -> {criteria.destination}")
+            logger.info(f"Filling search form: {criteria.dict()}")
             
             # Handle the "From" field
             from_selector = 'input[placeholder*="Where from"], input[aria-label*="Where from"]'
@@ -470,8 +470,9 @@ class GoogleFlightsScraper:
         try:
             logger.info(f"Starting flight scraping for {criteria.origin} -> {criteria.destination}")
             
-            # Navigate to Google Flights
-            await self.navigate_to_google_flights()
+            
+            # Navigate to Google Flights with appropriate URL
+            await self.navigate_to_google_flights(criteria)
             
             # Fill search form
             await self.fill_search_form(criteria)
@@ -527,6 +528,7 @@ async def scrape_flights_async(
         trip_type=TripType.ROUND_TRIP if return_date else TripType.ONE_WAY,
         max_results=max_results
     )
+    logger.info(f"Created SearchCriteria: {criteria.dict()}")
     
     async with GoogleFlightsScraper(headless=headless) as scraper:
         return await scraper.scrape_flights(criteria)
