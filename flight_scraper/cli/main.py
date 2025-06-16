@@ -231,24 +231,24 @@ def example() -> None:
     console.print("[bold green]Google Flights Scraper Examples[/bold green]\n")
     
     console.print("[bold]Basic one-way search:[/bold]")
-    console.print("python main.py scrape LAX NYC 2025-07-01\n")
+    console.print("python main.py cli scrape LAX NYC 2025-07-01\n")
     
     console.print("[bold]Round-trip search:[/bold]")
-    console.print("python main.py scrape LAX NYC 2025-07-01 --return 2025-07-10\n")
+    console.print("python main.py cli scrape LAX NYC 2025-07-01 --return 2025-07-10\n")
     
     console.print("[bold]Save results to JSON:[/bold]")
-    console.print("python main.py scrape LAX NYC 2025-07-01 --format json --output flights.json\n")
+    console.print("python main.py cli scrape LAX NYC 2025-07-01 --format json --output flights.json\n")
     
     console.print("[bold]Save results to CSV:[/bold]")
-    console.print("python main.py scrape LAX NYC 2025-07-01 --format csv --output flights.csv\n")
+    console.print("python main.py cli scrape LAX NYC 2025-07-01 --format csv --output flights.csv\n")
     
     console.print("[bold]Limit results and run headless:[/bold]")
-    console.print("python main.py scrape LAX NYC 2025-07-01 --max-results 20 --headless\n")
+    console.print("python main.py cli scrape LAX NYC 2025-07-01 --max-results 20 --headless\n")
     
     console.print("[bold]Verbose logging:[/bold]")
-    console.print("python main.py scrape LAX NYC 2025-07-01 --verbose\n")
+    console.print("python main.py cli scrape LAX NYC 2025-07-01 --verbose\n")
     
-    console.print("[bold]Using package directly:[/bold]")
+    console.print("[bold]Alternative - Using package directly:[/bold]")
     console.print("python -m flight_scraper.cli.main scrape LAX NYC 2025-07-01\n")
 
 

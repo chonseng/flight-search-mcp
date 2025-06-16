@@ -114,7 +114,7 @@ class GoogleFlightsScraper:
     async def fill_search_form(self, criteria: SearchCriteria) -> None:
         """Fill the flight search form with criteria."""
         try:
-            logger.info(f"Filling search form: {criteria.dict()}")
+            logger.info(f"Filling search form: {criteria.model_dump()}")
             
             # Handle the "From" field
             from_selector = 'input[placeholder*="Where from"], input[aria-label*="Where from"]'
@@ -597,7 +597,7 @@ async def scrape_flights_async(
         trip_type=TripType.ROUND_TRIP if return_date else TripType.ONE_WAY,
         max_results=max_results
     )
-    logger.info(f"Created SearchCriteria: {criteria.dict()}")
+    logger.info(f"Created SearchCriteria: {criteria.model_dump()}")
     
     async with GoogleFlightsScraper(headless=headless) as scraper:
         return await scraper.scrape_flights(criteria)
