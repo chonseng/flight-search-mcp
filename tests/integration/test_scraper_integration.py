@@ -1,4 +1,4 @@
-"""Test script to verify the restructured package works correctly."""
+"""Integration test script to verify the restructured package works correctly."""
 
 import sys
 from datetime import date, timedelta

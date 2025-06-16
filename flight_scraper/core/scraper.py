@@ -3,7 +3,7 @@
 import asyncio
 import time
 from datetime import date
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from urllib.parse import urlencode
 
 from playwright.async_api import async_playwright, Browser, Page, BrowserContext
@@ -17,7 +17,9 @@ from .models import (
 from ..utils import (
     random_delay, wait_for_element, safe_click, safe_fill, safe_get_text,
     format_date_for_input, parse_duration, parse_price, parse_stops,
-    retry_async_operation, normalize_airport_code
+    retry_async_operation, normalize_airport_code,
+    RobustSelector, SelectorHealthMonitor, robust_find_element,
+    robust_click, robust_fill, robust_get_text, ROBUST_SELECTOR_CONFIGS
 )
 
 
@@ -29,6 +31,8 @@ class GoogleFlightsScraper:
         self.context: Optional[BrowserContext] = None
         self.page: Optional[Page] = None
         self.headless = headless
+        self.health_monitor = SelectorHealthMonitor()
+        self.selector_monitors: Dict[str, Any] = {}
         
     async def __aenter__(self):
         """Async context manager entry."""
@@ -112,157 +116,137 @@ class GoogleFlightsScraper:
                 raise NavigationError(f"Navigation failed: {str(e)}")
     
     async def fill_search_form(self, criteria: SearchCriteria) -> None:
-        """Fill the flight search form with criteria."""
+        """Fill the flight search form with criteria using robust selectors."""
         try:
-            logger.info(f"Filling search form: {criteria.model_dump()}")
+            logger.info(f"Filling search form with robust selectors: {criteria.model_dump()}")
             
-            # Handle the "From" field
-            from_selector = 'input[placeholder*="Where from"], input[aria-label*="Where from"]'
-            if not await safe_fill(self.page, from_selector, criteria.origin):
-                # Try alternative selector
-                from_selector = '.II2One input'
-                if not await safe_fill(self.page, from_selector, criteria.origin):
-                    raise ElementNotFoundError("Could not find 'From' input field")
+            # Handle the "From" field with robust selector
+            logger.info("🔍 Filling origin field...")
+            origin_success = await robust_fill(self.page, "origin_input", criteria.origin)
+            if not origin_success:
+                logger.error("❌ Failed to fill origin field with all selector strategies")
+                raise ElementNotFoundError("Could not find 'From' input field using any selector strategy")
             
-            # Press Enter to confirm the "From" selection
+            logger.info("✅ Successfully filled origin field")
             await self.page.keyboard.press('Enter')
             await random_delay(1, 2)
             
-            # Handle the "To" field
-            to_selector = 'input[placeholder*="Where to"], input[aria-label*="Where to"]'
-            if not await safe_fill(self.page, to_selector, criteria.destination):
-                # Try alternative selector
-                to_selector = '.II2One input:nth-child(2)'
-                if not await safe_fill(self.page, to_selector, criteria.destination):
-                    raise ElementNotFoundError("Could not find 'To' input field")
+            # Handle the "To" field with robust selector
+            logger.info("🔍 Filling destination field...")
+            destination_success = await robust_fill(self.page, "destination_input", criteria.destination)
+            if not destination_success:
+                logger.error("❌ Failed to fill destination field with all selector strategies")
+                raise ElementNotFoundError("Could not find 'To' input field using any selector strategy")
             
-            # Press Enter to confirm the "To" selection
+            logger.info("✅ Successfully filled destination field")
             await self.page.keyboard.press('Enter')
             await random_delay(1, 2)
             
-            # Handle departure date
+            # Handle departure date with robust selector
+            logger.info("🔍 Filling departure date...")
             departure_str = format_date_for_input(criteria.departure_date)
-            date_selector = 'input[placeholder*="Departure"], input[aria-label*="Departure"]'
-            if not await safe_fill(self.page, date_selector, departure_str):
-                logger.warning("Could not fill departure date directly, trying click method")
-                # Try clicking on date picker
-                if await safe_click(self.page, date_selector):
+            departure_success = await robust_fill(self.page, "departure_date", departure_str)
+            if not departure_success:
+                logger.warning("⚠️ Could not fill departure date directly, trying click method")
+                # Try clicking on date picker as fallback
+                if await robust_click(self.page, "departure_date"):
                     await random_delay(1, 2)
+                    # Try typing the date after clicking
+                    await self.page.keyboard.type(departure_str)
+                else:
+                    logger.error("❌ Failed to interact with departure date field")
+            else:
+                logger.info("✅ Successfully filled departure date")
             
-            # Press Enter after filling the departure date
             await self.page.keyboard.press('Enter')
             await random_delay(1, 2)
             
             # Handle return date for round-trip
             if criteria.trip_type == TripType.ROUND_TRIP and criteria.return_date:
+                logger.info("🔍 Filling return date...")
                 return_str = format_date_for_input(criteria.return_date)
-                return_selector = 'input[placeholder*="Return"], input[aria-label*="Return"]'
-                if not await safe_fill(self.page, return_selector, return_str):
-                    logger.warning("Could not fill return date")
-                # Press Enter after return date too
+                return_success = await robust_fill(self.page, "return_date", return_str)
+                if not return_success:
+                    logger.warning("⚠️ Could not fill return date")
+                else:
+                    logger.info("✅ Successfully filled return date")
+                
                 await self.page.keyboard.press('Enter')
                 await random_delay(1, 2)
             
             await random_delay(2, 3)
-            logger.info("Search form filled successfully")
+            logger.info("✅ Search form filled successfully with robust selectors")
             
         except Exception as e:
             logger.error(f"Failed to fill search form: {str(e)}")
             raise ScrapingError(f"Form filling failed: {str(e)}")
     
     async def trigger_search(self) -> None:
-        """Trigger the flight search."""
+        """Trigger the flight search using robust selectors."""
         try:
-            logger.info("Triggering flight search...")
+            logger.info("🔍 Triggering flight search with robust selectors...")
             
             search_triggered = False
             
-            # Try JavaScript click approach first (most reliable based on user feedback)
-            try:
-                logger.info("Trying JavaScript click on search button...")
-                js_click_script = '''
-                document.querySelector("#yDmH0d > c-wiz.zQTmif.SSPGKf > div > div:nth-child(2) > c-wiz > div.cKvRXe > c-wiz > div.vg4Z0e > div:nth-child(1) > div.SS6Dqf.POQx1c > div.MXvFbd > div > button").click()
-                '''
-                await self.page.evaluate(js_click_script)
-                logger.info("Successfully executed JavaScript click")
+            # Try robust search button clicking first
+            logger.info("🔍 Attempting robust search button click...")
+            search_success = await robust_click(self.page, "search_button")
+            
+            if search_success:
+                logger.info("✅ Successfully clicked search button with robust selector")
                 search_triggered = True
                 await random_delay(3, 5)
+            else:
+                logger.warning("⚠️ Robust search button click failed, trying fallback methods...")
                 
-            except Exception as e:
-                logger.warning(f"JavaScript click failed: {e}")
-                
-                # Fallback to Enter key approach
+                # Fallback to JavaScript click (keep the working approach as backup)
                 try:
-                    logger.info("Trying Enter key to trigger search...")
-                    await self.page.keyboard.press('Enter')
-                    await random_delay(2, 3)
+                    logger.info("🔄 Trying JavaScript click fallback...")
+                    js_click_script = '''
+                    document.querySelector("#yDmH0d > c-wiz.zQTmif.SSPGKf > div > div:nth-child(2) > c-wiz > div.cKvRXe > c-wiz > div.vg4Z0e > div:nth-child(1) > div.SS6Dqf.POQx1c > div.MXvFbd > div > button").click()
+                    '''
+                    await self.page.evaluate(js_click_script)
+                    logger.info("✅ JavaScript click fallback succeeded")
                     search_triggered = True
+                    await random_delay(3, 5)
                     
-                except Exception as e2:
-                    logger.warning(f"Enter key approach failed: {e2}")
+                except Exception as js_error:
+                    logger.warning(f"⚠️ JavaScript click fallback failed: {js_error}")
                     
-                    # Fallback to button clicking
-                    search_selectors = [
-                        'button:has-text("Explore")',
-                        'button[aria-label*="Search"]',
-                        'button:has-text("Search")',
-                    ]
-                    
-                    search_clicked = False
-                    for selector in search_selectors:
-                        try:
-                            if await safe_click(self.page, selector):
-                                logger.info(f"Clicked search button with selector: {selector}")
-                                await random_delay(2, 3)
-                                search_clicked = True
-                                search_triggered = True
-                                break
-                        except Exception as click_error:
-                            logger.debug(f"Failed to click selector {selector}: {click_error}")
-                        await random_delay(0.5, 1)
-                    
-                    if not search_clicked:
-                        logger.warning("Could not trigger search with any method")
+                    # Final fallback to Enter key
+                    try:
+                        logger.info("🔄 Trying Enter key as final fallback...")
+                        await self.page.keyboard.press('Enter')
+                        await random_delay(2, 3)
+                        search_triggered = True
+                        logger.info("✅ Enter key fallback succeeded")
+                        
+                    except Exception as enter_error:
+                        logger.error(f"❌ All search trigger methods failed. Last error: {enter_error}")
+            
+            if not search_triggered:
+                raise ScrapingError("Failed to trigger search with any method")
             
             # Wait for page to process the search
-            logger.info("Waiting for search to execute...")
+            logger.info("⏳ Waiting for search to execute...")
             await random_delay(10, 15)
             
             # Check if URL contains "search?" (proper search detection)
             current_url = self.page.url
-            logger.info(f"Current URL after search: {current_url}")
+            logger.info(f"📍 Current URL after search: {current_url}")
             
             if "search?" in current_url:
-                logger.info("Search successfully triggered (URL contains 'search?')")
+                logger.info("✅ Search successfully triggered (URL contains 'search?')")
             else:
-                logger.warning("Search not triggered - URL doesn't contain 'search?'")
-                logger.warning("Will try additional search button clicking...")
+                logger.warning("⚠️ Search not triggered - URL doesn't contain 'search?'")
+                # Don't try additional clicking since we have robust selectors now
+                # Just log the issue for monitoring
                 
-                # Try more aggressive search button clicking
-                additional_selectors = [
-                    'div[role="button"]:has-text("Search")',
-                    'div[role="button"]:has-text("Explore")',
-                ]
-                
-                for selector in additional_selectors:
-                    try:
-                        if await safe_click(self.page, selector):
-                            logger.info(f"Clicked additional search selector: {selector}")
-                            await random_delay(3, 5)
-                            
-                            # Check URL again
-                            new_url = self.page.url
-                            if "search?" in new_url:
-                                logger.info("Search now triggered after additional clicking")
-                                break
-                    except Exception as e:
-                        logger.debug(f"Additional selector {selector} failed: {e}")
-            
             # Wait for flight results to load
-            logger.info("Waiting for flight results to appear...")
+            logger.info("⏳ Waiting for flight results to appear...")
             await random_delay(5, 8)
             
-            logger.info("Search triggered successfully")
+            logger.info("✅ Search trigger process completed")
             
         except Exception as e:
             logger.error(f"Failed to trigger search: {str(e)}")
@@ -422,91 +406,22 @@ class GoogleFlightsScraper:
             raise ScrapingError(f"Data extraction failed: {str(e)}")
     
     async def extract_single_flight(self, element) -> Optional[FlightOffer]:
-        """Extract data from a single flight element."""
+        """Extract data from a single flight element using robust extraction methods."""
         try:
-            # Extract price with comprehensive selectors and debugging
-            price_selectors = [
-                '[data-gs*="price"]',
-                '[jsname*="price"]',
-                'span[aria-label*="dollars"]',
-                'span[aria-label*="price"]',
-                'div[aria-label*="dollars"]',
-                '*[aria-label*="price"]'
-            ]
+            # Enhanced price extraction with hierarchical approach
+            price = await self._extract_price_robust(element)
             
-            price = "N/A"
-            # First try to find any element containing dollar sign
-            try:
-                all_text_elements = await element.query_selector_all('span, div')
-                for text_element in all_text_elements:
-                    try:
-                        text_content = await text_element.inner_text()
-                        if text_content and '$' in text_content and any(char.isdigit() for char in text_content):
-                            price = parse_price(text_content)
-                            if price and price != "N/A" and '$' in price:
-                                logger.debug(f"Found price via text search: {price}")
-                                break
-                    except:
-                        continue
-            except:
-                pass
+            # Enhanced airline extraction
+            airline = await self._extract_airline_robust(element)
             
-            # If text search didn't work, try specific selectors
-            if price == "N/A":
-                for selector in price_selectors:
-                    try:
-                        price_element = await element.query_selector(selector)
-                        if price_element:
-                            price_text = await price_element.inner_text()
-                            if price_text and '$' in price_text:
-                                price = parse_price(price_text)
-                                if price and price != "N/A":
-                                    logger.debug(f"Found price via selector {selector}: {price}")
-                                    break
-                    except:
-                        continue
+            # Enhanced duration extraction
+            duration = await self._extract_duration_robust(element)
             
-            # Extract airline
-            airline_selectors = ['.Ir0Voe', '.sSHqwe', '[data-gs*="airline"]']
-            airline = "Unknown"
-            for selector in airline_selectors:
-                airline_element = await element.query_selector(selector)
-                if airline_element:
-                    airline = await airline_element.inner_text()
-                    break
+            # Enhanced stops extraction
+            stops = await self._extract_stops_robust(element)
             
-            # Extract duration
-            duration_selectors = ['.gvkrdb', '.AdWm1c', '[data-gs*="duration"]']
-            duration = "N/A"
-            for selector in duration_selectors:
-                duration_element = await element.query_selector(selector)
-                if duration_element:
-                    duration_text = await duration_element.inner_text()
-                    duration = parse_duration(duration_text)
-                    break
-            
-            # Extract stops information
-            stops_selectors = ['.EfT7Ae .ogfYpf', '.c8rWCd', '[data-gs*="stops"]']
-            stops_text = ""
-            for selector in stops_selectors:
-                stops_element = await element.query_selector(selector)
-                if stops_element:
-                    stops_text = await stops_element.inner_text()
-                    break
-            
-            stops = parse_stops(stops_text)
-            
-            # Extract departure and arrival times
-            time_selectors = ['.wtdjmc .eoY5cb', '.zxVSec', '[data-gs*="time"]']
-            departure_time = "N/A"
-            arrival_time = "N/A"
-            
-            for selector in time_selectors:
-                time_elements = await element.query_selector_all(selector)
-                if len(time_elements) >= 2:
-                    departure_time = await time_elements[0].inner_text()
-                    arrival_time = await time_elements[-1].inner_text()
-                    break
+            # Enhanced time extraction
+            departure_time, arrival_time = await self._extract_times_robust(element)
             
             # Create flight segment (simplified for now)
             segment = FlightSegment(
@@ -533,26 +448,35 @@ class GoogleFlightsScraper:
             return None
     
     async def scrape_flights(self, criteria: SearchCriteria) -> ScrapingResult:
-        """Main method to scrape flights based on search criteria."""
+        """Main method to scrape flights based on search criteria with health monitoring."""
         start_time = time.time()
         
         try:
-            logger.info(f"Starting flight scraping for {criteria.origin} -> {criteria.destination}")
+            logger.info(f"🚀 Starting flight scraping with robust selectors for {criteria.origin} -> {criteria.destination}")
             
+            # Initialize selector monitoring for this session
+            self.selector_monitors = {}
             
             # Navigate to Google Flights with appropriate URL
             await self.navigate_to_google_flights(criteria)
             
-            # Fill search form
+            # Fill search form with robust selectors
             await self.fill_search_form(criteria)
             
-            # Trigger search
+            # Trigger search with robust selectors
             await self.trigger_search()
             
-            # Extract flight data
+            # Extract flight data with enhanced monitoring
             flights = await self.extract_flight_data(criteria, criteria.max_results)
             
             execution_time = time.time() - start_time
+            
+            # Record health monitoring data
+            await self._record_session_health("flight_search_page")
+            
+            # Generate health report
+            health_report = self.health_monitor.get_health_report()
+            logger.info(f"📊 Selector health report: {health_report.get('overall_health', {})}")
             
             result = ScrapingResult(
                 search_criteria=criteria,
@@ -562,12 +486,18 @@ class GoogleFlightsScraper:
                 execution_time=execution_time
             )
             
-            logger.info(f"Scraping completed successfully. Found {len(flights)} flights in {execution_time:.2f}s")
+            logger.info(f"✅ Scraping completed successfully. Found {len(flights)} flights in {execution_time:.2f}s")
             return result
             
         except Exception as e:
             execution_time = time.time() - start_time
-            logger.error(f"Scraping failed: {str(e)}")
+            logger.error(f"❌ Scraping failed: {str(e)}")
+            
+            # Still record health data even on failure for analysis
+            try:
+                await self._record_session_health("flight_search_page_failed")
+            except:
+                pass
             
             return ScrapingResult(
                 search_criteria=criteria,
@@ -577,6 +507,653 @@ class GoogleFlightsScraper:
                 error_message=str(e),
                 execution_time=execution_time
             )
+    
+    async def _record_session_health(self, page_type: str):
+        """Record selector health data for the current session."""
+        try:
+            # Collect monitoring data from any robust selectors used
+            # This would be populated by the RobustSelector instances during the session
+            
+            # For now, create a basic health record
+            # In a full implementation, we'd collect data from all RobustSelector instances
+            monitor_data = {}
+            
+            # Record the session
+            self.health_monitor.record_page_health(page_type, monitor_data)
+            
+            logger.debug(f"📈 Recorded selector health data for {page_type}")
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to record selector health: {str(e)}")
+
+    async def _extract_price_robust(self, element) -> str:
+        """Extract price using robust hierarchical approach."""
+        # Semantic approach - look for price-specific attributes
+        semantic_selectors = [
+            '[aria-label*="dollar"]',
+            '[aria-label*="price"]',
+            '[data-testid*="price"]',
+            '[data-gs*="price"]',
+            '[jsname*="price"]'
+        ]
+        
+        for selector in semantic_selectors:
+            try:
+                price_element = await element.query_selector(selector)
+                if price_element:
+                    price_text = await price_element.inner_text()
+                    if price_text and '$' in price_text:
+                        price = parse_price(price_text)
+                        if price and price != "N/A":
+                            logger.debug(f"✅ Found price via semantic selector {selector}: {price}")
+                            return price
+            except:
+                continue
+        
+        # Content-based approach - search all text elements for price patterns
+        try:
+            all_text_elements = await element.query_selector_all('span, div')
+            for text_element in all_text_elements:
+                try:
+                    text_content = await text_element.inner_text()
+                    if text_content and '$' in text_content and any(char.isdigit() for char in text_content):
+                        price = parse_price(text_content)
+                        if price and price != "N/A" and '$' in price:
+                            logger.debug(f"✅ Found price via content search: {price}")
+                            return price
+                except:
+                    continue
+        except:
+            pass
+        
+        # Structural approach - common price container patterns
+        structural_selectors = [
+            '.price-container',
+            '.flight-price',
+            '.fare-price',
+            'div:last-child span', # Often price is in the last column
+            'div[style*="right"] span' # Right-aligned price
+        ]
+        
+        for selector in structural_selectors:
+            try:
+                price_element = await element.query_selector(selector)
+                if price_element:
+                    price_text = await price_element.inner_text()
+                    if price_text and '$' in price_text:
+                        price = parse_price(price_text)
+                        if price and price != "N/A":
+                            logger.debug(f"✅ Found price via structural selector {selector}: {price}")
+                            return price
+            except:
+                continue
+        
+        logger.warning("⚠️ Could not extract price with any method")
+        return "N/A"
+    
+    async def _extract_airline_robust(self, element) -> str:
+        """Extract airline using robust hierarchical approach."""
+        # Semantic approach
+        semantic_selectors = [
+            '[aria-label*="airline"]',
+            '[data-testid*="airline"]',
+            '[alt*="logo"]',
+            'img[alt]'
+        ]
+        
+        for selector in semantic_selectors:
+            try:
+                airline_element = await element.query_selector(selector)
+                if airline_element:
+                    # Try alt text first (for logos)
+                    alt_text = await airline_element.get_attribute('alt')
+                    if alt_text and len(alt_text) > 1:
+                        logger.debug(f"✅ Found airline via semantic selector {selector}: {alt_text}")
+                        return alt_text
+                    
+                    # Try inner text
+                    airline_text = await airline_element.inner_text()
+                    if airline_text:
+                        logger.debug(f"✅ Found airline via semantic selector {selector}: {airline_text}")
+                        return airline_text.strip()
+            except:
+                continue
+        
+        # Class-based approach (existing working selectors)
+        class_selectors = ['.Ir0Voe', '.sSHqwe', '[data-gs*="airline"]']
+        for selector in class_selectors:
+            try:
+                airline_element = await element.query_selector(selector)
+                if airline_element:
+                    airline_text = await airline_element.inner_text()
+                    if airline_text:
+                        logger.debug(f"✅ Found airline via class selector {selector}: {airline_text}")
+                        return airline_text.strip()
+            except:
+                continue
+        
+        # Content-based approach - look for airline name patterns
+        try:
+            all_text_elements = await element.query_selector_all('span, div')
+            airline_patterns = ['United', 'American', 'Delta', 'Southwest', 'JetBlue', 'Alaska', 'Spirit', 'Frontier']
+            
+            for text_element in all_text_elements:
+                try:
+                    text_content = await text_element.inner_text()
+                    if text_content:
+                        for pattern in airline_patterns:
+                            if pattern.lower() in text_content.lower():
+                                logger.debug(f"✅ Found airline via pattern matching: {text_content}")
+                                return text_content.strip()
+                except:
+                    continue
+        except:
+            pass
+        
+        logger.warning("⚠️ Could not extract airline with any method")
+        return "Unknown"
+    
+    async def _extract_duration_robust(self, element) -> str:
+        """Extract duration using robust hierarchical approach."""
+        # Semantic approach
+        semantic_selectors = [
+            '[aria-label*="duration"]',
+            '[data-testid*="duration"]',
+            '[data-gs*="duration"]'
+        ]
+        
+        for selector in semantic_selectors:
+            try:
+                duration_element = await element.query_selector(selector)
+                if duration_element:
+                    duration_text = await duration_element.inner_text()
+                    if duration_text:
+                        duration = parse_duration(duration_text)
+                        logger.debug(f"✅ Found duration via semantic selector {selector}: {duration}")
+                        return duration
+            except:
+                continue
+        
+        # Class-based approach (existing working selectors)
+        class_selectors = ['.gvkrdb', '.AdWm1c']
+        for selector in class_selectors:
+            try:
+                duration_element = await element.query_selector(selector)
+                if duration_element:
+                    duration_text = await duration_element.inner_text()
+                    if duration_text:
+                        duration = parse_duration(duration_text)
+                        logger.debug(f"✅ Found duration via class selector {selector}: {duration}")
+                        return duration
+            except:
+                continue
+        
+        # Content-based approach - look for time patterns
+        try:
+            import re
+            all_text_elements = await element.query_selector_all('span, div')
+            time_pattern = re.compile(r'\d+h\s*\d*m?|\d+:\d+')
+            
+            for text_element in all_text_elements:
+                try:
+                    text_content = await text_element.inner_text()
+                    if text_content and time_pattern.search(text_content):
+                        duration = parse_duration(text_content)
+                        logger.debug(f"✅ Found duration via pattern matching: {duration}")
+                        return duration
+                except:
+                    continue
+        except:
+            pass
+        
+        logger.warning("⚠️ Could not extract duration with any method")
+        return "N/A"
+    
+    async def _extract_stops_robust(self, element) -> int:
+        """Extract stops information using robust hierarchical approach."""
+        # Semantic approach
+        semantic_selectors = [
+            '[aria-label*="stop"]',
+            '[data-testid*="stop"]',
+            '[data-gs*="stop"]'
+        ]
+        
+        for selector in semantic_selectors:
+            try:
+                stops_element = await element.query_selector(selector)
+                if stops_element:
+                    stops_text = await stops_element.inner_text()
+                    if stops_text:
+                        stops = parse_stops(stops_text)
+                        logger.debug(f"✅ Found stops via semantic selector {selector}: {stops}")
+                        return stops
+            except:
+                continue
+        
+        # Class-based approach (existing working selectors)
+        class_selectors = ['.EfT7Ae .ogfYpf', '.c8rWCd']
+        for selector in class_selectors:
+            try:
+                stops_element = await element.query_selector(selector)
+                if stops_element:
+                    stops_text = await stops_element.inner_text()
+                    if stops_text:
+                        stops = parse_stops(stops_text)
+                        logger.debug(f"✅ Found stops via class selector {selector}: {stops}")
+                        return stops
+            except:
+                continue
+        
+        # Content-based approach - look for stop patterns
+        try:
+            all_text_elements = await element.query_selector_all('span, div')
+            
+            for text_element in all_text_elements:
+                try:
+                    text_content = await text_element.inner_text()
+                    if text_content:
+                        stops = parse_stops(text_content)
+                        if stops >= 0:  # parse_stops returns valid number
+                            logger.debug(f"✅ Found stops via content search: {stops}")
+                            return stops
+                except:
+                    continue
+        except:
+            pass
+        
+        logger.warning("⚠️ Could not extract stops with any method")
+        return 0  # Default to nonstop if we can't determine
+    
+    async def _extract_times_robust(self, element) -> Tuple[str, str]:
+        """Extract departure and arrival times using robust hierarchical approach."""
+        # Semantic approach
+        semantic_selectors = [
+            '[aria-label*="departure"]',
+            '[aria-label*="arrival"]',
+            '[data-testid*="time"]',
+            '[data-gs*="time"]'
+        ]
+        
+        departure_time = "N/A"
+        arrival_time = "N/A"
+        
+        for selector in semantic_selectors:
+            try:
+                time_elements = await element.query_selector_all(selector)
+                if len(time_elements) >= 2:
+                    departure_time = await time_elements[0].inner_text()
+                    arrival_time = await time_elements[-1].inner_text()
+                    logger.debug(f"✅ Found times via semantic selector {selector}: {departure_time} -> {arrival_time}")
+                    return departure_time.strip(), arrival_time.strip()
+            except:
+                continue
+        
+        # Class-based approach (existing working selectors)
+        class_selectors = ['.wtdjmc .eoY5cb', '.zxVSec']
+        for selector in class_selectors:
+            try:
+                time_elements = await element.query_selector_all(selector)
+                if len(time_elements) >= 2:
+                    departure_time = await time_elements[0].inner_text()
+                    arrival_time = await time_elements[-1].inner_text()
+                    logger.debug(f"✅ Found times via class selector {selector}: {departure_time} -> {arrival_time}")
+                    return departure_time.strip(), arrival_time.strip()
+            except:
+                continue
+        
+        # Content-based approach - look for time patterns
+        try:
+            import re
+            all_text_elements = await element.query_selector_all('span, div')
+            time_pattern = re.compile(r'\d{1,2}:\d{2}\s*[APap][Mm]?|\d{1,2}:\d{2}')
+            times_found = []
+            
+            for text_element in all_text_elements:
+                try:
+                    text_content = await text_element.inner_text()
+                    if text_content:
+                        matches = time_pattern.findall(text_content)
+                        times_found.extend(matches)
+                except:
+                    continue
+            
+            if len(times_found) >= 2:
+                departure_time = times_found[0]
+                arrival_time = times_found[-1]
+                logger.debug(f"✅ Found times via pattern matching: {departure_time} -> {arrival_time}")
+                return departure_time.strip(), arrival_time.strip()
+                
+        except:
+            pass
+        
+        logger.warning("⚠️ Could not extract times with any method")
+        return "N/A", "N/A"
+
+
+async def scrape_flights_async(
+    origin: str,
+    destination: str,
+    departure_date: date,
+    return_date: Optional[date] = None,
+    max_results: int = 50,
+    headless: bool = False
+) -> ScrapingResult:
+    """Convenience function to scrape flights asynchronously."""
+    
+    criteria = SearchCriteria(
+        origin=normalize_airport_code(origin),
+        destination=normalize_airport_code(destination),
+        departure_date=departure_date,
+        return_date=return_date,
+        trip_type=TripType.ROUND_TRIP if return_date else TripType.ONE_WAY,
+        max_results=max_results
+    )
+    logger.info(f"Created SearchCriteria: {criteria.model_dump()}")
+    
+    async with GoogleFlightsScraper(headless=headless) as scraper:
+        return await scraper.scrape_flights(criteria)
+
+
+    async def _extract_price_robust(self, element) -> str:
+        """Extract price using robust hierarchical approach."""
+        # Semantic approach - look for price-specific attributes
+        semantic_selectors = [
+            '[aria-label*="dollar"]',
+            '[aria-label*="price"]',
+            '[data-testid*="price"]',
+            '[data-gs*="price"]',
+            '[jsname*="price"]'
+        ]
+        
+        for selector in semantic_selectors:
+            try:
+                price_element = await element.query_selector(selector)
+                if price_element:
+                    price_text = await price_element.inner_text()
+                    if price_text and '$' in price_text:
+                        price = parse_price(price_text)
+                        if price and price != "N/A":
+                            logger.debug(f"✅ Found price via semantic selector {selector}: {price}")
+                            return price
+            except:
+                continue
+        
+        # Content-based approach - search all text elements for price patterns
+        try:
+            all_text_elements = await element.query_selector_all('span, div')
+            for text_element in all_text_elements:
+                try:
+                    text_content = await text_element.inner_text()
+                    if text_content and '$' in text_content and any(char.isdigit() for char in text_content):
+                        price = parse_price(text_content)
+                        if price and price != "N/A" and '$' in price:
+                            logger.debug(f"✅ Found price via content search: {price}")
+                            return price
+                except:
+                    continue
+        except:
+            pass
+        
+        # Structural approach - common price container patterns
+        structural_selectors = [
+            '.price-container',
+            '.flight-price',
+            '.fare-price',
+            'div:last-child span', # Often price is in the last column
+            'div[style*="right"] span' # Right-aligned price
+        ]
+        
+        for selector in structural_selectors:
+            try:
+                price_element = await element.query_selector(selector)
+                if price_element:
+                    price_text = await price_element.inner_text()
+                    if price_text and '$' in price_text:
+                        price = parse_price(price_text)
+                        if price and price != "N/A":
+                            logger.debug(f"✅ Found price via structural selector {selector}: {price}")
+                            return price
+            except:
+                continue
+        
+        logger.warning("⚠️ Could not extract price with any method")
+        return "N/A"
+    
+    async def _extract_airline_robust(self, element) -> str:
+        """Extract airline using robust hierarchical approach."""
+        # Semantic approach
+        semantic_selectors = [
+            '[aria-label*="airline"]',
+            '[data-testid*="airline"]',
+            '[alt*="logo"]',
+            'img[alt]'
+        ]
+        
+        for selector in semantic_selectors:
+            try:
+                airline_element = await element.query_selector(selector)
+                if airline_element:
+                    # Try alt text first (for logos)
+                    alt_text = await airline_element.get_attribute('alt')
+                    if alt_text and len(alt_text) > 1:
+                        logger.debug(f"✅ Found airline via semantic selector {selector}: {alt_text}")
+                        return alt_text
+                    
+                    # Try inner text
+                    airline_text = await airline_element.inner_text()
+                    if airline_text:
+                        logger.debug(f"✅ Found airline via semantic selector {selector}: {airline_text}")
+                        return airline_text.strip()
+            except:
+                continue
+        
+        # Class-based approach (existing working selectors)
+        class_selectors = ['.Ir0Voe', '.sSHqwe', '[data-gs*="airline"]']
+        for selector in class_selectors:
+            try:
+                airline_element = await element.query_selector(selector)
+                if airline_element:
+                    airline_text = await airline_element.inner_text()
+                    if airline_text:
+                        logger.debug(f"✅ Found airline via class selector {selector}: {airline_text}")
+                        return airline_text.strip()
+            except:
+                continue
+        
+        # Content-based approach - look for airline name patterns
+        try:
+            all_text_elements = await element.query_selector_all('span, div')
+            airline_patterns = ['United', 'American', 'Delta', 'Southwest', 'JetBlue', 'Alaska', 'Spirit', 'Frontier']
+            
+            for text_element in all_text_elements:
+                try:
+                    text_content = await text_element.inner_text()
+                    if text_content:
+                        for pattern in airline_patterns:
+                            if pattern.lower() in text_content.lower():
+                                logger.debug(f"✅ Found airline via pattern matching: {text_content}")
+                                return text_content.strip()
+                except:
+                    continue
+        except:
+            pass
+        
+        logger.warning("⚠️ Could not extract airline with any method")
+        return "Unknown"
+    
+    async def _extract_duration_robust(self, element) -> str:
+        """Extract duration using robust hierarchical approach."""
+        # Semantic approach
+        semantic_selectors = [
+            '[aria-label*="duration"]',
+            '[data-testid*="duration"]',
+            '[data-gs*="duration"]'
+        ]
+        
+        for selector in semantic_selectors:
+            try:
+                duration_element = await element.query_selector(selector)
+                if duration_element:
+                    duration_text = await duration_element.inner_text()
+                    if duration_text:
+                        duration = parse_duration(duration_text)
+                        logger.debug(f"✅ Found duration via semantic selector {selector}: {duration}")
+                        return duration
+            except:
+                continue
+        
+        # Class-based approach (existing working selectors)
+        class_selectors = ['.gvkrdb', '.AdWm1c']
+        for selector in class_selectors:
+            try:
+                duration_element = await element.query_selector(selector)
+                if duration_element:
+                    duration_text = await duration_element.inner_text()
+                    if duration_text:
+                        duration = parse_duration(duration_text)
+                        logger.debug(f"✅ Found duration via class selector {selector}: {duration}")
+                        return duration
+            except:
+                continue
+        
+        # Content-based approach - look for time patterns
+        try:
+            all_text_elements = await element.query_selector_all('span, div')
+            time_pattern = re.compile(r'\d+h\s*\d*m?|\d+:\d+')
+            
+            for text_element in all_text_elements:
+                try:
+                    text_content = await text_element.inner_text()
+                    if text_content and time_pattern.search(text_content):
+                        duration = parse_duration(text_content)
+                        logger.debug(f"✅ Found duration via pattern matching: {duration}")
+                        return duration
+                except:
+                    continue
+        except:
+            pass
+        
+        logger.warning("⚠️ Could not extract duration with any method")
+        return "N/A"
+    
+    async def _extract_stops_robust(self, element) -> int:
+        """Extract stops information using robust hierarchical approach."""
+        # Semantic approach
+        semantic_selectors = [
+            '[aria-label*="stop"]',
+            '[data-testid*="stop"]',
+            '[data-gs*="stop"]'
+        ]
+        
+        for selector in semantic_selectors:
+            try:
+                stops_element = await element.query_selector(selector)
+                if stops_element:
+                    stops_text = await stops_element.inner_text()
+                    if stops_text:
+                        stops = parse_stops(stops_text)
+                        logger.debug(f"✅ Found stops via semantic selector {selector}: {stops}")
+                        return stops
+            except:
+                continue
+        
+        # Class-based approach (existing working selectors)
+        class_selectors = ['.EfT7Ae .ogfYpf', '.c8rWCd']
+        for selector in class_selectors:
+            try:
+                stops_element = await element.query_selector(selector)
+                if stops_element:
+                    stops_text = await stops_element.inner_text()
+                    if stops_text:
+                        stops = parse_stops(stops_text)
+                        logger.debug(f"✅ Found stops via class selector {selector}: {stops}")
+                        return stops
+            except:
+                continue
+        
+        # Content-based approach - look for stop patterns
+        try:
+            all_text_elements = await element.query_selector_all('span, div')
+            
+            for text_element in all_text_elements:
+                try:
+                    text_content = await text_element.inner_text()
+                    if text_content:
+                        stops = parse_stops(text_content)
+                        if stops >= 0:  # parse_stops returns valid number
+                            logger.debug(f"✅ Found stops via content search: {stops}")
+                            return stops
+                except:
+                    continue
+        except:
+            pass
+        
+        logger.warning("⚠️ Could not extract stops with any method")
+        return 0  # Default to nonstop if we can't determine
+    
+    async def _extract_times_robust(self, element) -> Tuple[str, str]:
+        """Extract departure and arrival times using robust hierarchical approach."""
+        # Semantic approach
+        semantic_selectors = [
+            '[aria-label*="departure"]',
+            '[aria-label*="arrival"]',
+            '[data-testid*="time"]',
+            '[data-gs*="time"]'
+        ]
+        
+        departure_time = "N/A"
+        arrival_time = "N/A"
+        
+        for selector in semantic_selectors:
+            try:
+                time_elements = await element.query_selector_all(selector)
+                if len(time_elements) >= 2:
+                    departure_time = await time_elements[0].inner_text()
+                    arrival_time = await time_elements[-1].inner_text()
+                    logger.debug(f"✅ Found times via semantic selector {selector}: {departure_time} -> {arrival_time}")
+                    return departure_time.strip(), arrival_time.strip()
+            except:
+                continue
+        
+        # Class-based approach (existing working selectors)
+        class_selectors = ['.wtdjmc .eoY5cb', '.zxVSec']
+        for selector in class_selectors:
+            try:
+                time_elements = await element.query_selector_all(selector)
+                if len(time_elements) >= 2:
+                    departure_time = await time_elements[0].inner_text()
+                    arrival_time = await time_elements[-1].inner_text()
+                    logger.debug(f"✅ Found times via class selector {selector}: {departure_time} -> {arrival_time}")
+                    return departure_time.strip(), arrival_time.strip()
+            except:
+                continue
+        
+        # Content-based approach - look for time patterns
+        try:
+            all_text_elements = await element.query_selector_all('span, div')
+            time_pattern = re.compile(r'\d{1,2}:\d{2}\s*[APap][Mm]?|\d{1,2}:\d{2}')
+            times_found = []
+            
+            for text_element in all_text_elements:
+                try:
+                    text_content = await text_element.inner_text()
+                    if text_content:
+                        matches = time_pattern.findall(text_content)
+                        times_found.extend(matches)
+                except:
+                    continue
+            
+            if len(times_found) >= 2:
+                departure_time = times_found[0]
+                arrival_time = times_found[-1]
+                logger.debug(f"✅ Found times via pattern matching: {departure_time} -> {arrival_time}")
+                return departure_time.strip(), arrival_time.strip()
+                
+        except:
+            pass
+        
+        logger.warning("⚠️ Could not extract times with any method")
+        return "N/A", "N/A"
 
 
 async def scrape_flights_async(
