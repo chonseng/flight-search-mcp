@@ -1,6 +1,6 @@
 # Flight Search MCP
 
-A production-ready flight search scraper with Model Context Protocol (MCP) server support and robust architecture.
+Google Flights scraper with MCP server integration for AI assistants and automated flight data extraction.
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
