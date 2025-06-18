@@ -57,8 +57,8 @@ Test data models like SearchCriteria, FlightOffer, FlightSegment:
 python -m unittest tests.unit.test_models -v
 ```
 
-#### Utility Tests (11 tests)
-Test utility functions like parse_price, parse_duration, normalize_airport_code:
+#### Utility Tests (7 tests)
+Test utility functions like parse_price, parse_duration, format_date_for_input:
 ```bash
 python -m unittest tests.unit.test_utils -v
 ```

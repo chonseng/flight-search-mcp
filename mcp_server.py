@@ -13,38 +13,6 @@ from typing import Any, Dict
 from flight_scraper.core.scraper import scrape_flights_async
 from flight_scraper.core.models import TripType
 
-# Airport code mappings for common cities - helps normalize user input
-AIRPORT_MAPPINGS = {
-    "new york": "JFK", "nyc": "JFK", "los angeles": "LAX", "la": "LAX",
-    "san francisco": "SFO", "sf": "SFO", "chicago": "ORD", "miami": "MIA",
-    "boston": "BOS", "seattle": "SEA", "denver": "DEN", "atlanta": "ATL",
-    "dallas": "DFW", "houston": "IAH", "phoenix": "PHX", "philadelphia": "PHL",
-    "detroit": "DTW", "minneapolis": "MSP", "orlando": "MCO", "las vegas": "LAS",
-    "vegas": "LAS", "washington": "DCA", "dc": "DCA", "london": "LHR",
-    "paris": "CDG", "tokyo": "NRT", "singapore": "SIN", "sydney": "SYD",
-    "toronto": "YYZ", "vancouver": "YVR", "mexico city": "MEX", "cancun": "CUN"
-}
-
-def normalize_airport_input(airport_input: str) -> str:
-    """
-    Normalize airport input to proper airport code.
-    Handles both city names and airport codes.
-    """
-    if not airport_input:
-        return ""
-    
-    airport_clean = airport_input.strip().lower()
-    
-    # Check if it's already a valid 3-letter code
-    if len(airport_clean) == 3 and airport_clean.isalpha():
-        return airport_clean.upper()
-    
-    # Check airport mappings for city names
-    if airport_clean in AIRPORT_MAPPINGS:
-        return AIRPORT_MAPPINGS[airport_clean]
-    
-    # Fallback to uppercase
-    return airport_input.upper()
 
 def serialize_for_json(obj: Any) -> Any:
     """Convert objects to JSON-serializable format."""
@@ -69,9 +37,9 @@ async def search_flights_impl(
     start_time = datetime.now()
     
     try:
-        # Normalize airport codes to handle city names
-        origin_code = normalize_airport_input(origin)
-        destination_code = normalize_airport_input(destination)
+        # Use airport codes directly without normalization
+        origin_code = origin.strip().upper()
+        destination_code = destination.strip().upper()
         
         if not origin_code or not destination_code:
             return {
@@ -150,48 +118,6 @@ async def search_flights_impl(
             "execution_time": execution_time
         }
 
-async def get_airport_info_impl(query: str) -> Dict[str, Any]:
-    """
-    Get airport information and normalize airport queries.
-    Helps users understand how their input will be processed.
-    """
-    try:
-        original_query = query
-        normalized_code = normalize_airport_input(query)
-        
-        # Check if query matches any city in our mappings
-        query_lower = query.lower().strip()
-        matched_city = None
-        for city, code in AIRPORT_MAPPINGS.items():
-            if query_lower == city or query_lower in city:
-                matched_city = city
-                break
-        
-        result = {
-            "success": True,
-            "original_query": original_query,
-            "normalized_code": normalized_code,
-            "matched_city": matched_city,
-            "is_valid_code": len(normalized_code) == 3 and normalized_code.isalpha(),
-            "suggestions": []
-        }
-        
-        # Provide suggestions for partial matches
-        if not result["is_valid_code"] and not matched_city:
-            suggestions = []
-            for city, code in AIRPORT_MAPPINGS.items():
-                if query_lower in city or city in query_lower:
-                    suggestions.append({"city": city, "code": code})
-            result["suggestions"] = suggestions[:5]  # Limit to 5 suggestions
-        
-        return result
-        
-    except Exception as e:
-        return {
-            "success": False,
-            "error": f"Airport info lookup failed: {str(e)}",
-            "original_query": query
-        }
 
 async def get_scraper_status_impl() -> Dict[str, Any]:
     """
@@ -218,7 +144,7 @@ async def get_scraper_status_impl() -> Dict[str, Any]:
                 "browser_test": browser_test_success,
                 "browser_error": browser_error
             },
-            "available_tools": ["search_flights", "get_airport_info", "get_scraper_status"],
+            "available_tools": ["search_flights", "get_scraper_status"],
             "timestamp": datetime.now().isoformat()
         }
         
@@ -289,17 +215,6 @@ async def handle_request(request: Dict[str, Any]) -> Dict[str, Any]:
                         }
                     },
                     {
-                        "name": "get_airport_info",
-                        "description": "Get airport information and normalize queries",
-                        "inputSchema": {
-                            "type": "object",
-                            "properties": {
-                                "query": {"type": "string", "description": "Airport code or city name"}
-                            },
-                            "required": ["query"]
-                        }
-                    },
-                    {
                         "name": "get_scraper_status",
                         "description": "Check scraper health and configuration",
                         "inputSchema": {"type": "object", "properties": {}}
@@ -314,12 +229,6 @@ async def handle_request(request: Dict[str, Any]) -> Dict[str, Any]:
 
             if tool_name == "search_flights":
                 result = await search_flights_impl(**arguments)
-                return create_success_response(request_id, {
-                    "content": [{"type": "text", "text": json.dumps(result, indent=2)}]
-                })
-
-            elif tool_name == "get_airport_info":
-                result = await get_airport_info_impl(**arguments)
                 return create_success_response(request_id, {
                     "content": [{"type": "text", "text": json.dumps(result, indent=2)}]
                 })

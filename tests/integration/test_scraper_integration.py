@@ -33,7 +33,7 @@ def test_imports():
         print("✅ Configuration imported")
         
         # Test utils
-        from flight_scraper.utils import normalize_airport_code, parse_price
+        from flight_scraper.utils import parse_price
         print("✅ Utility functions imported")
         
         return True
@@ -52,12 +52,12 @@ def test_functionality():
     
     try:
         from flight_scraper import SearchCriteria, TripType
-        from flight_scraper.utils import normalize_airport_code, format_date_for_input
+        from flight_scraper.utils import format_date_for_input
         
         # Test SearchCriteria creation
         criteria = SearchCriteria(
-            origin=normalize_airport_code("jfk"),
-            destination=normalize_airport_code("lax"),
+            origin="JFK",
+            destination="LAX",
             departure_date=date.today() + timedelta(days=30),
             trip_type=TripType.ONE_WAY,
             max_results=10
@@ -67,10 +67,6 @@ def test_functionality():
         # Test date formatting
         formatted_date = format_date_for_input(criteria.departure_date)
         print(f"✅ Date formatting works: {formatted_date}")
-        
-        # Test airport code normalization
-        normalized = normalize_airport_code("Los Angeles")
-        print(f"✅ Airport code normalization: 'Los Angeles' -> '{normalized}'")
         
         return True
         

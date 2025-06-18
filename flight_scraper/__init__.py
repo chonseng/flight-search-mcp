@@ -19,12 +19,11 @@ from .core.models import (
 
 # MCP server functionality (optional import)
 try:
-    from .mcp.server import create_mcp_server, normalize_airport_input
+    from .mcp.server import create_mcp_server
     _MCP_AVAILABLE = True
 except ImportError:
     _MCP_AVAILABLE = False
     create_mcp_server = None
-    normalize_airport_input = None
 
 __version__ = "1.0.0"
 __author__ = "Flight Scraper Team"
@@ -56,7 +55,6 @@ __all__ = [
     
     # MCP server functions (if available)
     "create_mcp_server",
-    "normalize_airport_input",
     
     # Package metadata
     "__version__",
@@ -71,7 +69,6 @@ __all__ = [
 # Conditional exports based on availability
 if not _MCP_AVAILABLE:
     __all__.remove("create_mcp_server")
-    __all__.remove("normalize_airport_input")
 
 
 def get_package_info():

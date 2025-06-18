@@ -1,12 +1,11 @@
-# Google Flights Scraper
+# Google Flights MCP
 
-A simple, maintainable web scraper for Google Flights with MCP (Model Context Protocol) server support.
+A Model Context Protocol (MCP) server that provides Google Flights scraping capabilities for AI assistants.
 
 ## Features
 
 - **Flight Search**: Search for flights between airports with flexible date options
 - **MCP Server**: Expose scraping capabilities via MCP protocol for AI assistants
-- **Airport Normalization**: Automatic conversion of city names to airport codes
 - **Robust Scraping**: Handles dynamic content and provides fallback strategies
 
 ## Quick Start
@@ -57,7 +56,7 @@ python main.py cli scrape JFK LAX 2024-07-01 --format csv --output flights.csv
 python main.py cli scrape JFK LAX 2024-07-01 --verbose
 
 # Complex example: Round-trip search with all options
-python main.py cli scrape "New York" "Los Angeles" 2024-07-01 \
+python main.py cli scrape JFK LAX 2024-07-01 \
   --return 2024-07-10 \
   --max-results 25 \
   --format json \
@@ -67,8 +66,8 @@ python main.py cli scrape "New York" "Los Angeles" 2024-07-01 \
 ```
 
 **CLI Command Options:**
-- `origin`: Origin airport code or city name (e.g., JFK, "New York")
-- `destination`: Destination airport code or city name (e.g., LAX, "Los Angeles")
+- `origin`: Origin airport code (e.g., JFK)
+- `destination`: Destination airport code (e.g., LAX)
 - `departure_date`: Departure date in YYYY-MM-DD format
 - `--return, -r`: Return date for round-trip flights (YYYY-MM-DD)
 - `--max-results, -m`: Maximum number of results (default: 50)
@@ -121,11 +120,10 @@ main.py                 # Main entry point
 
 ## MCP Tools
 
-The MCP server provides three tools:
+The MCP server provides two tools:
 
 1. **search_flights**: Search for flights between airports
-2. **get_airport_info**: Get airport code information and suggestions
-3. **get_scraper_status**: Check if the scraper is working properly
+2. **get_scraper_status**: Check if the scraper is working properly
 
 ## Configuration
 
@@ -133,7 +131,6 @@ The scraper automatically handles:
 - Browser stealth settings to avoid detection
 - Retry logic for failed requests
 - Dynamic element detection
-- Airport code normalization
 
 ## Debugging
 

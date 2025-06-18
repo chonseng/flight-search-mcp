@@ -167,16 +167,6 @@ def setup_logging() -> None:
     )
 
 
-def validate_airport_code(code: str) -> bool:
-    """Validate airport code format."""
-    return bool(re.match(r'^[A-Z]{3}$', code.upper())) if code else False
-
-
-def normalize_airport_code(code: str) -> str:
-    """Normalize airport code to uppercase 3-letter format."""
-    if not code:
-        return ""
-    return code.upper().strip()[:3]
 class RobustSelector:
     """Robust selector with intelligent fallback hierarchy."""
     

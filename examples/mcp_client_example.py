@@ -79,36 +79,10 @@ class FlightsMCPClient:
         
         return await self.call_tool("search_flights", arguments)
     
-    async def get_airport_info(self, query: str) -> Dict[str, Any]:
-        """Get airport code information."""
-        return await self.call_tool("get_airport_info", {"query": query})
     
     async def get_scraper_status(self) -> Dict[str, Any]:
         """Get scraper status and health information."""
         return await self.call_tool("get_scraper_status", {})
-
-
-async def demonstrate_airport_lookup():
-    """Demonstrate airport code lookup functionality."""
-    print("\n" + "="*60)
-    print("🛫 AIRPORT CODE LOOKUP EXAMPLES")
-    print("="*60)
-    
-    async with FlightsMCPClient() as client:
-        test_queries = ["New York", "JFK", "Los Angeles", "SF", "Chicago", "Miami"]
-        
-        for query in test_queries:
-            print(f"\n🔍 Looking up: {query}")
-            result = await client.get_airport_info(query)
-            
-            if result.get("success"):
-                print(f"  ✅ Original: {result['original_query']}")
-                print(f"  ✈️  Code: {result['normalized_code']}")
-                print(f"  🎯 Valid: {result['is_valid_code']}")
-                if result.get("matched_city"):
-                    print(f"  🏙️  City: {result['matched_city']}")
-            else:
-                print(f"  ❌ Error: {result.get('error', 'Unknown error')}")
 
 
 async def demonstrate_scraper_status():
@@ -205,11 +179,6 @@ async def demonstrate_error_handling():
     print("="*60)
     
     async with FlightsMCPClient() as client:
-        # Test invalid airport code
-        print("\n❌ Testing invalid airport code:")
-        result = await client.get_airport_info("INVALID")
-        print(f"  Result: {result.get('error', 'No error message')}")
-        
         # Test invalid date format
         print("\n❌ Testing invalid date format:")
         result = await client.search_flights("JFK", "LAX", "invalid-date")
@@ -232,7 +201,6 @@ async def main():
     
     try:
         await demonstrate_scraper_status()
-        await demonstrate_airport_lookup()
         await demonstrate_flight_search()
         await demonstrate_error_handling()
         

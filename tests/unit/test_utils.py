@@ -4,8 +4,8 @@ import unittest
 from datetime import date
 
 from flight_scraper.utils import (
-    parse_duration, parse_price, parse_stops, 
-    format_date_for_input, validate_airport_code, normalize_airport_code
+    parse_duration, parse_price, parse_stops,
+    format_date_for_input
 )
 
 
@@ -42,23 +42,6 @@ class TestUtils(unittest.TestCase):
         formatted = format_date_for_input(test_date)
         self.assertEqual(formatted, "2025-07-01")
     
-    def test_validate_airport_code(self):
-        """Test airport code validation."""
-        self.assertTrue(validate_airport_code("LAX"))
-        self.assertTrue(validate_airport_code("NYC"))
-        self.assertTrue(validate_airport_code("jfk"))
-        self.assertFalse(validate_airport_code("LAXX"))
-        self.assertFalse(validate_airport_code("LA"))
-        self.assertFalse(validate_airport_code(""))
-        self.assertFalse(validate_airport_code(None))
-    
-    def test_normalize_airport_code(self):
-        """Test airport code normalization."""
-        self.assertEqual(normalize_airport_code("lax"), "LAX")
-        self.assertEqual(normalize_airport_code("jfk"), "JFK")
-        self.assertEqual(normalize_airport_code("NYC"), "NYC")
-        self.assertEqual(normalize_airport_code(" sfo "), "SFO")
-        self.assertEqual(normalize_airport_code(""), "")
 
     def test_parse_duration_edge_cases(self):
         """Test duration parsing edge cases."""
@@ -81,19 +64,6 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(parse_stops("3 stops"), 3)
         self.assertEqual(parse_stops("multiple stops"), 1)  # Default case when no number found
     
-    def test_validate_airport_code_case_insensitive(self):
-        """Test airport code validation is case insensitive."""
-        self.assertTrue(validate_airport_code("lax"))
-        self.assertTrue(validate_airport_code("LAX"))
-        self.assertTrue(validate_airport_code("Lax"))
-        self.assertTrue(validate_airport_code("LaX"))
-    
-    def test_normalize_airport_code_edge_cases(self):
-        """Test airport code normalization edge cases."""
-        self.assertEqual(normalize_airport_code(None), "")
-        self.assertEqual(normalize_airport_code("  "), "")
-        self.assertEqual(normalize_airport_code("123"), "123")  # Numbers should work
-        self.assertEqual(normalize_airport_code("a"), "A")  # Single character
 
 
 if __name__ == "__main__":

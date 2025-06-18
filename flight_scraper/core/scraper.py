@@ -17,7 +17,7 @@ from .models import (
 from ..utils import (
     random_delay, wait_for_element, safe_click, safe_fill, safe_get_text,
     format_date_for_input, parse_duration, parse_price, parse_stops,
-    retry_async_operation, normalize_airport_code,
+    retry_async_operation,
     RobustSelector, SelectorHealthMonitor, robust_find_element,
     robust_click, robust_fill, robust_get_text, ROBUST_SELECTOR_CONFIGS
 )
@@ -841,8 +841,8 @@ async def scrape_flights_async(
     """Convenience function to scrape flights asynchronously."""
     
     criteria = SearchCriteria(
-        origin=normalize_airport_code(origin),
-        destination=normalize_airport_code(destination),
+        origin=origin,
+        destination=destination,
         departure_date=departure_date,
         return_date=return_date,
         trip_type=TripType.ROUND_TRIP if return_date else TripType.ONE_WAY,
@@ -1167,8 +1167,8 @@ async def scrape_flights_async(
     """Convenience function to scrape flights asynchronously."""
     
     criteria = SearchCriteria(
-        origin=normalize_airport_code(origin),
-        destination=normalize_airport_code(destination),
+        origin=origin,
+        destination=destination,
         departure_date=departure_date,
         return_date=return_date,
         trip_type=TripType.ROUND_TRIP if return_date else TripType.ONE_WAY,

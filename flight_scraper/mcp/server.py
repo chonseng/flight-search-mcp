@@ -14,40 +14,8 @@ from loguru import logger
 
 from ..core.scraper import scrape_flights_async
 from ..core.models import TripType, SearchCriteria
-from ..utils import normalize_airport_code
-
 # Initialize FastMCP server
 mcp = FastMCP("Google Flights Scraper")
-
-# Airport mappings for user convenience
-AIRPORT_MAPPINGS = {
-    "new york": "JFK", "nyc": "JFK", "los angeles": "LAX", "la": "LAX",
-    "san francisco": "SFO", "sf": "SFO", "chicago": "ORD", "miami": "MIA",
-    "boston": "BOS", "seattle": "SEA", "denver": "DEN", "atlanta": "ATL",
-    "dallas": "DFW", "houston": "IAH", "phoenix": "PHX", "philadelphia": "PHL",
-    "detroit": "DTW", "minneapolis": "MSP", "orlando": "MCO", "las vegas": "LAS",
-    "vegas": "LAS", "washington": "DCA", "dc": "DCA", "london": "LHR",
-    "paris": "CDG", "tokyo": "NRT", "singapore": "SIN", "sydney": "SYD",
-    "toronto": "YYZ", "vancouver": "YVR", "mexico city": "MEX", "cancun": "CUN"
-}
-
-def normalize_airport_input(airport_input: str) -> str:
-    """Normalize airport input to proper airport code."""
-    if not airport_input:
-        return ""
-    
-    airport_clean = airport_input.strip().lower()
-    
-    # Check if already a valid 3-letter code
-    if len(airport_clean) == 3 and airport_clean.isalpha():
-        return airport_clean.upper()
-    
-    # Check airport mappings
-    if airport_clean in AIRPORT_MAPPINGS:
-        return AIRPORT_MAPPINGS[airport_clean]
-    
-    # Fallback to normalize_airport_code utility
-    return normalize_airport_code(airport_input)
 
 def serialize_for_json(obj: Any) -> Any:
     """Convert objects to JSON-serializable format."""
@@ -76,9 +44,9 @@ async def search_flights(
     try:
         logger.info(f"Flight search: {origin} -> {destination} on {departure_date}")
         
-        # Normalize airport codes
-        origin_code = normalize_airport_input(origin)
-        destination_code = normalize_airport_input(destination)
+        # Use airport codes directly without normalization
+        origin_code = origin.strip().upper()
+        destination_code = destination.strip().upper()
         
         if not origin_code or not destination_code:
             return {
@@ -161,52 +129,6 @@ async def search_flights(
             "execution_time": execution_time
         }
 
-@mcp.tool
-async def get_airport_info(query: str) -> Dict[str, Any]:
-    """Get airport information and normalize queries."""
-    try:
-        logger.info(f"Airport info lookup: '{query}'")
-        
-        original_query = query
-        normalized_code = normalize_airport_input(query)
-        
-        # Check for city matches
-        query_lower = query.lower().strip()
-        matched_city = None
-        for city, code in AIRPORT_MAPPINGS.items():
-            if query_lower == city or query_lower in city:
-                matched_city = city
-                break
-        
-        result = {
-            "success": True,
-            "original_query": original_query,
-            "normalized_code": normalized_code,
-            "matched_city": matched_city,
-            "is_valid_code": len(normalized_code) == 3 and normalized_code.isalpha(),
-            "suggestions": []
-        }
-        
-        # Add suggestions for partial matches
-        if not result["is_valid_code"] and not matched_city:
-            suggestions = []
-            for city, code in AIRPORT_MAPPINGS.items():
-                if query_lower in city or city in query_lower:
-                    suggestions.append({"city": city, "code": code})
-            result["suggestions"] = suggestions[:5]
-        
-        logger.info(f"Airport lookup completed: '{query}' -> '{normalized_code}'")
-        return result
-        
-    except Exception as e:
-        error_msg = f"Airport info lookup failed: {str(e)}"
-        logger.error(error_msg)
-        
-        return {
-            "success": False,
-            "error": error_msg,
-            "original_query": query
-        }
 
 @mcp.tool
 async def get_scraper_status() -> Dict[str, Any]:
@@ -232,16 +154,12 @@ async def get_scraper_status() -> Dict[str, Any]:
             "scraper_status": {
                 "browser_test": browser_test_success,
                 "browser_error": browser_error,
-                "available_tools": ["search_flights", "get_airport_info", "get_scraper_status"]
+                "available_tools": ["search_flights", "get_scraper_status"]
             },
             "supported_features": {
                 "trip_types": ["one_way", "round_trip"],
                 "max_results_limit": 50,
                 "async_operation": True
-            },
-            "airport_mappings": {
-                "total_cities": len(AIRPORT_MAPPINGS),
-                "sample_mappings": dict(list(AIRPORT_MAPPINGS.items())[:10])
             },
             "timestamp": datetime.now().isoformat()
         }

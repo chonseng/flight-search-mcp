@@ -92,22 +92,18 @@ def test_basic_functionality():
     
     try:
         from models import SearchCriteria, TripType
-        from utils import normalize_airport_code, format_date_for_input
+        from utils import format_date_for_input
         
         # Test model creation
         criteria = SearchCriteria(
             origin="LAX",
-            destination="NYC", 
+            destination="NYC",
             departure_date=date.today(),
             trip_type=TripType.ONE_WAY
         )
         print("✅ SearchCriteria model creation")
         
         # Test utility functions
-        normalized = normalize_airport_code("lax")
-        assert normalized == "LAX"
-        print("✅ Airport code normalization")
-        
         formatted_date = format_date_for_input(date.today())
         assert len(formatted_date) == 10  # YYYY-MM-DD format
         print("✅ Date formatting")
