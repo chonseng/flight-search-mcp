@@ -151,15 +151,15 @@ setup(
 
 # Post-install message
 print("""
-🎉 Flight Search MCP installation complete!
+Flight Search MCP installation complete!
 
-📋 Next steps:
+Next steps:
 1. Install Playwright browsers: playwright install chromium
 2. Run tests: pytest tests/
-3. Check installation: python -c "import flight_scraper; print('✅ Ready!')"
+3. Check installation: python -c "import flight_scraper; print('Ready!')"
 
-📖 Documentation: https://github.com/chonseng/flight-search-mcp/wiki
-🐛 Issues: https://github.com/chonseng/flight-search-mcp/issues
+Documentation: https://github.com/chonseng/flight-search-mcp/wiki
+Issues: https://github.com/chonseng/flight-search-mcp/issues
 
-🚀 Happy scraping!
+Happy scraping!
 """)
