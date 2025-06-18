@@ -1,6 +1,12 @@
-# Flight Scraper Testing Guide
+# Testing Guide
 
 This document provides comprehensive instructions for running tests in the flight scraper project.
+
+> **📚 Documentation Navigation:**
+> - **[README.md](README.md)** - Quick start and basic usage
+> - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development workflow and testing requirements
+> - **[DEVELOPMENT.md](DEVELOPMENT.md)** - Advanced testing patterns and debugging
+> - **[MCP_SERVER_GUIDE.md](MCP_SERVER_GUIDE.md)** - MCP server testing
 
 ## 📁 Test Directory Structure
 
@@ -28,7 +34,7 @@ tests/
 
 Make sure you're in the project root directory:
 ```bash
-cd /path/to/flight-scrapper-2
+cd /path/to/flight-search-mcp
 ```
 
 ### 1. Run All Unit Tests
@@ -186,7 +192,7 @@ python tests/diagnostics/test_selector_diagnostics.py
 If you get `ModuleNotFoundError: No module named 'flight_scraper'`:
 ```bash
 # Make sure you're in the project root directory
-pwd  # Should show .../flight-scrapper-2
+pwd  # Should show .../flight-search-mcp
 
 # Make sure the flight_scraper package exists
 ls flight_scraper/  # Should show __init__.py and other files
@@ -198,6 +204,8 @@ Integration and diagnostic tests may fail if:
 - Network connectivity issues
 - Google Flights site changes
 
+> **💡 For advanced debugging techniques, see [DEVELOPMENT.md](DEVELOPMENT.md#debugging-and-troubleshooting)**
+
 ### pytest Not Found
 If `pytest` command fails:
 ```bash
@@ -208,13 +216,21 @@ pip install pytest
 python -m pytest tests/ -v
 ```
 
+> **🔧 For detailed testing requirements and CI setup, see [CONTRIBUTING.md](CONTRIBUTING.md#testing-requirements)**
+
 ## 📈 Test Status
 
 - **Total Unit Tests**: 28 ✅
 - **Models Tests**: 5 ✅
-- **Utils Tests**: 11 ✅  
+- **Utils Tests**: 11 ✅
 - **Selectors Tests**: 12 ✅
 - **Integration Tests**: Working ✅
 - **Import Verification**: Passing ✅
 
 All tests are currently passing and the test structure follows Python testing best practices.
+
+## 📚 Related Documentation
+
+- **[CONTRIBUTING.md](CONTRIBUTING.md#testing-requirements)** - Testing requirements for contributions
+- **[DEVELOPMENT.md](DEVELOPMENT.md#testing-and-quality-assurance)** - Advanced testing patterns and custom fixtures
+- **[README.md](README.md#testing)** - Quick testing commands for users

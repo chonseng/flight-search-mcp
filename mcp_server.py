@@ -287,10 +287,17 @@ async def main():
         except Exception:
             continue  # Keep server running on unexpected errors
 
-if __name__ == "__main__":
+def console_main():
+    """
+    Console script entry point for flight-scraper-mcp command.
+    This is a synchronous wrapper around the async main() function.
+    """
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
     except Exception:
         sys.exit(1)
+
+if __name__ == "__main__":
+    console_main()

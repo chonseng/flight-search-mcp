@@ -36,10 +36,10 @@ def check_project_files():
     """Check if all project files exist."""
     required_files = [
         'main.py',
-        'scraper.py', 
-        'models.py',
-        'utils.py',
-        'config.py',
+        'flight_scraper/core/scraper.py',
+        'flight_scraper/core/models.py',
+        'flight_scraper/utils.py',
+        'flight_scraper/core/config.py',
         'requirements.txt',
         'README.md'
     ]
@@ -66,10 +66,10 @@ def check_project_files():
 def check_local_imports():
     """Check if local modules can be imported."""
     local_modules = [
-        'config',
-        'models', 
-        'utils',
-        'scraper'
+        'flight_scraper.core.config',
+        'flight_scraper.core.models',
+        'flight_scraper.utils',
+        'flight_scraper.core.scraper'
     ]
     
     print("\n🐍 Checking local modules...")
@@ -91,8 +91,8 @@ def test_basic_functionality():
     print("\n⚙️  Testing basic functionality...")
     
     try:
-        from models import SearchCriteria, TripType
-        from utils import format_date_for_input
+        from flight_scraper.core.models import SearchCriteria, TripType
+        from flight_scraper.utils import format_date_for_input
         
         # Test model creation
         criteria = SearchCriteria(
@@ -153,9 +153,9 @@ def main():
     if all_passed:
         print("🎉 All checks passed! The scraper is ready to use.")
         print("\nNext steps:")
-        print("  1. Run 'python main.py example' to see usage examples")
-        print("  2. Try 'python main.py scrape LAX NYC 2025-07-01' for a basic search")
-        print("  3. Run 'python example.py' to test with sample data")
+        print("  1. Run 'python main.py cli example' to see usage examples")
+        print("  2. Try 'python main.py cli scrape LAX NYC 2025-07-01' for a basic search")
+        print("  3. Run 'python mcp_server.py' to test MCP server")
         print("  4. Check 'README.md' for detailed documentation")
     else:
         print("❌ Some checks failed. Please fix the issues above before using the scraper.")

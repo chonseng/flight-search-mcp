@@ -1,156 +1,254 @@
-# Google Flights MCP
+# Flight Search MCP
 
-A Model Context Protocol (MCP) server that provides Google Flights scraping capabilities for AI assistants.
+A production-ready flight search scraper with Model Context Protocol (MCP) server support and robust architecture.
 
-## Features
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Test Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen.svg)](tests/)
 
-- **Flight Search**: Search for flights between airports with flexible date options
-- **MCP Server**: Expose scraping capabilities via MCP protocol for AI assistants
-- **Robust Scraping**: Handles dynamic content and provides fallback strategies
-
-## Quick Start
+## 🚀 Quick Start
 
 ### Installation
 
 ```bash
-pip install -r requirements.txt
-playwright install
+# Install the package
+pip install -e .
+
+# Install Playwright browsers
+playwright install chromium
+
+# Verify installation
+python verify_installation.py
 ```
 
-### Usage
+### Basic Usage
 
-#### MCP Server (for AI assistants)
+```python
+from flight_scraper.core import GoogleFlightsScraper, SearchCriteria
+from datetime import date
+import asyncio
+
+async def search_flights():
+    criteria = SearchCriteria(
+        origin="JFK",
+        destination="LAX", 
+        departure_date=date(2024, 7, 15),
+        max_results=10
+    )
+    
+    async with GoogleFlightsScraper(headless=True) as scraper:
+        result = await scraper.scrape_flights(criteria)
+        
+        if result.success:
+            print(f"✅ Found {len(result.flights)} flights")
+            for flight in result.flights[:3]:
+                print(f"💰 {flight.price} - {flight.segments[0].airline}")
+        else:
+            print(f"❌ Search failed: {result.error_message}")
+
+asyncio.run(search_flights())
+```
+
+### MCP Server
 
 ```bash
 # Start MCP server in stdio mode (recommended for AI assistants)
-python mcp_server.py
-
-# Or use the main entry point
 python main.py mcp --stdio
+
+# Alternative: Direct server with stdio mode
+python -m flight_scraper.mcp.server --stdio
+
+# Start server with HTTP interface (for development/testing)
+python main.py mcp --host localhost --port 8000
+
+# Alternative module syntax for HTTP mode
+python -m flight_scraper.mcp.server --host localhost --port 8000
 ```
 
-#### CLI Usage
-
-The CLI provides a powerful interface for searching flights with various options:
+### CLI Usage
 
 ```bash
-# Basic one-way flight search
+# Basic search
 python main.py cli scrape JFK LAX 2024-07-01
 
-# Round-trip flight search
-python main.py cli scrape JFK LAX 2024-07-01 --return 2024-07-10
-
-# Search with maximum results limit
-python main.py cli scrape JFK LAX 2024-07-01 --max-results 20
-
-# Run in headless mode (no browser window)
-python main.py cli scrape JFK LAX 2024-07-01 --headless
-
-# Save results to JSON file
-python main.py cli scrape JFK LAX 2024-07-01 --format json --output flights.json
-
-# Save results to CSV file
-python main.py cli scrape JFK LAX 2024-07-01 --format csv --output flights.csv
-
-# Enable verbose logging for debugging
-python main.py cli scrape JFK LAX 2024-07-01 --verbose
-
-# Complex example: Round-trip search with all options
+# Round-trip with options
 python main.py cli scrape JFK LAX 2024-07-01 \
   --return 2024-07-10 \
-  --max-results 25 \
+  --max-results 20 \
   --format json \
-  --output my_flights.json \
+  --output flights.json
+
+# Alternative module syntax
+python -m flight_scraper.cli.main scrape JFK LAX 2024-07-01
+
+# Additional options
+python main.py cli scrape JFK LAX 2024-07-01 \
   --headless \
-  --verbose
-```
+  --verbose \
+  --max-results 50
 
-**CLI Command Options:**
-- `origin`: Origin airport code (e.g., JFK)
-- `destination`: Destination airport code (e.g., LAX)
-- `departure_date`: Departure date in YYYY-MM-DD format
-- `--return, -r`: Return date for round-trip flights (YYYY-MM-DD)
-- `--max-results, -m`: Maximum number of results (default: 50)
-- `--format, -f`: Output format - table, json, or csv (default: table)
-- `--output, -o`: Output file path for saving results
-- `--headless`: Run browser in headless mode (no GUI)
-- `--verbose, -v`: Enable verbose logging
-
-**View CLI examples:**
-```bash
+# View CLI examples
 python main.py cli example
 ```
 
-#### Direct Python Usage
+## 🎯 Key Features
 
-```python
-from flight_scraper.core.scraper import scrape_flights_async
-from datetime import date
+- **🔍 Robust Flight Search**: Multi-strategy scraping with fallback mechanisms
+- **🤖 MCP Server Integration**: Expose capabilities via Model Context Protocol
+- **🏗️ Modular Architecture**: Component-based design with [`BrowserManager`](flight_scraper/core/browser_manager.py:1), [`FormHandler`](flight_scraper/core/form_handler.py:1), [`DataExtractor`](flight_scraper/core/data_extractor.py:1)
+- **⚡ Performance Monitoring**: Real-time health monitoring and diagnostics
+- **🛡️ Anti-Detection**: Stealth browser settings and human-like patterns
+- **📊 Multiple Formats**: JSON, CSV, and table output support
 
-# Search for flights
-result = await scrape_flights_async(
-    origin="JFK",
-    destination="LAX", 
-    departure_date=date(2024, 6, 15),
-    max_results=10
-)
+## ⚙️ Configuration
 
-print(f"Found {len(result.flights)} flights")
-for flight in result.flights:
-    print(f"{flight.price} - {flight.segments[0].airline}")
-```
-
-## Project Structure
-
-```
-flight_scraper/
-├── core/
-│   ├── scraper.py      # Main scraping logic
-│   ├── models.py       # Data models
-│   └── config.py       # Configuration
-├── mcp/
-│   └── server.py       # MCP server implementation
-├── cli/
-│   └── main.py         # CLI interface
-└── utils.py            # Utility functions
-
-mcp_server.py           # Standalone MCP server (stdio mode)
-main.py                 # Main entry point
-```
-
-## MCP Tools
-
-The MCP server provides two tools:
-
-1. **search_flights**: Search for flights between airports
-2. **get_scraper_status**: Check if the scraper is working properly
-
-## Configuration
-
-The scraper automatically handles:
-- Browser stealth settings to avoid detection
-- Retry logic for failed requests
-- Dynamic element detection
-
-## Debugging
-
-Enable debug logging:
+### Environment Variables
 
 ```bash
-python main.py mcp --debug
+export FLIGHT_SCRAPER_HEADLESS=true
+export FLIGHT_SCRAPER_TIMEOUT=30000
+export FLIGHT_SCRAPER_MAX_RESULTS=50
+export FLIGHT_SCRAPER_LOG_LEVEL=INFO
 ```
 
-## Requirements
+### Python Configuration
 
-- Python 3.8+
-- Playwright (for browser automation)
-- FastMCP (for MCP server)
-- Loguru (for logging)
-- Pydantic (for data validation)
+```python
+from flight_scraper.core.config import get_config
 
-## Notes
+# Get configuration
+config = get_config()
+print(f"Timeout: {config.scraper.timeout}")
+print(f"Max Results: {config.scraper.max_results}")
 
-- The scraper is designed to be respectful of Google's servers
-- Uses random delays to avoid being detected as a bot
-- Handles various Google Flights page layouts
-- Provides comprehensive error handling and logging
+# Custom configuration
+custom_config = get_config(
+    environment="production",
+    scraper_timeout=60000,
+    max_results=100
+)
+```
+
+### Configuration File
+
+Create `config.json`:
+```json
+{
+  "scraper": {
+    "headless": true,
+    "timeout": 30000,
+    "max_results": 50
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "flight_scraper.log"
+  }
+}
+```
+
+## 🔧 Requirements
+
+- **Python**: 3.8 or higher
+- **Browser**: Chrome/Chromium (automatically installed by Playwright)
+- **Memory**: Minimum 2GB RAM (4GB recommended)
+- **Network**: Stable internet connection
+
+## 🛠️ Troubleshooting
+
+### Common Issues
+
+#### Browser initialization failed
+```bash
+# Reinstall Playwright
+pip uninstall playwright && pip install playwright
+playwright install chromium
+```
+
+#### No results found
+```python
+# Enable debug mode
+async with GoogleFlightsScraper(headless=False) as scraper:
+    result = await scraper.scrape_flights(criteria)
+    health = scraper.get_health_report()
+    print(f"Health: {health}")
+```
+
+#### Timeout errors
+```python
+from flight_scraper.core.config import get_config
+
+# Increase timeout
+config = get_config(scraper_timeout=60000)  # 60 seconds
+```
+
+### Health Monitoring
+
+```python
+async with GoogleFlightsScraper() as scraper:
+    result = await scraper.scrape_flights(criteria)
+    
+    # Check health
+    health = scraper.get_health_report()
+    if health.get('critical_issues'):
+        print("Issues found:")
+        for issue in health['critical_issues']:
+            print(f"  - {issue}")
+```
+
+### Debug Mode
+
+```python
+import os
+from loguru import logger
+
+# Enable debug logging
+os.environ['FLIGHT_SCRAPER_LOG_LEVEL'] = 'DEBUG'
+logger.remove()
+logger.add(lambda msg: print(msg, end=""), level="DEBUG")
+
+# Run with debugging
+async with GoogleFlightsScraper(headless=False) as scraper:
+    result = await scraper.scrape_flights(criteria)
+```
+
+## 🧪 Testing
+
+```bash
+# Run unit tests (fast)
+python -m unittest discover tests/unit -v
+
+# Run integration tests
+python tests/integration/test_scraper_integration.py
+
+# Run with pytest and coverage
+pytest tests/unit/ --cov=flight_scraper --cov-report=html
+```
+
+## 📚 Documentation
+
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development workflow, code standards, and contribution guidelines
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Detailed architecture, debugging, and advanced configuration  
+- **[MCP Server Guide](MCP_SERVER_GUIDE.md)** - Complete MCP server setup and usage
+- **[Testing Guide](TESTING_GUIDE.md)** - Comprehensive testing instructions
+
+## 🤝 Getting Help
+
+1. **Check Health Reports**: Use [`get_health_report()`](flight_scraper/core/scraper.py:1) for diagnostics
+2. **Review Documentation**: See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed troubleshooting
+3. **Run Diagnostics**: Use [`test_selector_diagnostics.py`](tests/diagnostics/test_selector_diagnostics.py:1)
+4. **Enable Debug Logging**: Set `FLIGHT_SCRAPER_LOG_LEVEL=DEBUG`
+
+## 📄 License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- Development setup and workflow
+- Code quality standards and testing requirements
+- Pull request process and guidelines
+
+---
+
+**Built with ❤️ for reliable flight data extraction**

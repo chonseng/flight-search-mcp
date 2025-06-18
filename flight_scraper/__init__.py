@@ -1,6 +1,6 @@
-"""Google Flights Scraper Package.
+"""Flight Search MCP Package.
 
-A comprehensive web scraper for extracting flight information from Google Flights.
+A comprehensive flight search scraper with Model Context Protocol (MCP) server support.
 Features both CLI interface and MCP server for AI assistant integration.
 """
 
@@ -27,8 +27,8 @@ except ImportError:
 
 __version__ = "1.0.0"
 __author__ = "Flight Scraper Team"
-__description__ = "Google Flights web scraper with MCP server support"
-__url__ = "https://github.com/yourusername/flight-scrapper-2"
+__description__ = "Flight search scraper with MCP server support"
+__url__ = "https://github.com/chonseng/flight-search-mcp"
 __license__ = "MIT"
 
 # Build information
@@ -74,7 +74,7 @@ if not _MCP_AVAILABLE:
 def get_package_info():
     """Get comprehensive package information."""
     return {
-        "name": "google-flights-scraper",
+        "name": "flight-search-mcp",
         "version": __version__,
         "author": __author__,
         "description": __description__,
