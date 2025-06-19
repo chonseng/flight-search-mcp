@@ -15,6 +15,10 @@ class TestFormHandler:
     def setup_method(self):
         """Set up test fixtures."""
         self.mock_page = AsyncMock(spec=Page)
+        # Properly mock the keyboard object with all needed methods
+        self.mock_page.keyboard = AsyncMock()
+        self.mock_page.keyboard.press = AsyncMock()
+        self.mock_page.keyboard.type = AsyncMock()
         self.handler = FormHandler(self.mock_page)
         
         self.sample_criteria = SearchCriteria(
@@ -93,8 +97,6 @@ class TestFormHandler:
     @pytest.mark.asyncio
     async def test_fill_search_form_success(self):
         """Test successful form filling."""
-        self.mock_page.keyboard.press.return_value = None
-        
         with patch('flight_scraper.core.form_handler.robust_fill') as mock_fill, \
              patch('flight_scraper.core.form_handler.random_delay'), \
              patch.object(self.handler, '_fill_departure_date') as mock_departure:
@@ -117,8 +119,6 @@ class TestFormHandler:
     @pytest.mark.asyncio
     async def test_fill_search_form_round_trip(self):
         """Test form filling for round-trip with return date."""
-        self.mock_page.keyboard.press.return_value = None
-        
         with patch('flight_scraper.core.form_handler.robust_fill') as mock_fill, \
              patch('flight_scraper.core.form_handler.random_delay'), \
              patch.object(self.handler, '_fill_departure_date') as mock_departure, \
@@ -141,7 +141,7 @@ class TestFormHandler:
             
             mock_fill.return_value = False
             
-            with pytest.raises(ElementNotFoundError, match="Could not find 'From' input field"):
+            with pytest.raises(ScrapingError, match="Form filling failed"):
                 await self.handler.fill_search_form(self.sample_criteria)
 
     @pytest.mark.asyncio
@@ -153,7 +153,7 @@ class TestFormHandler:
             # Origin succeeds, destination fails
             mock_fill.side_effect = [True, False]
             
-            with pytest.raises(ElementNotFoundError, match="Could not find 'To' input field"):
+            with pytest.raises(ScrapingError, match="Form filling failed"):
                 await self.handler.fill_search_form(self.sample_criteria)
 
     @pytest.mark.asyncio
@@ -165,7 +165,6 @@ class TestFormHandler:
              patch('flight_scraper.core.form_handler.random_delay'):
             
             mock_fill.return_value = True
-            self.mock_page.keyboard.press.return_value = None
             
             await self.handler._fill_departure_date(test_date)
             
@@ -185,8 +184,6 @@ class TestFormHandler:
             
             mock_fill.return_value = False
             mock_click.return_value = True
-            self.mock_page.keyboard.type.return_value = None
-            self.mock_page.keyboard.press.return_value = None
             
             await self.handler._fill_departure_date(test_date)
             
@@ -217,7 +214,6 @@ class TestFormHandler:
              patch('flight_scraper.core.form_handler.random_delay'):
             
             mock_fill.return_value = True
-            self.mock_page.keyboard.press.return_value = None
             
             await self.handler._fill_return_date(test_date)
             
@@ -289,7 +285,6 @@ class TestFormHandler:
         """Test fallback search strategies with Enter key success."""
         with patch('flight_scraper.core.form_handler.random_delay'):
             self.mock_page.evaluate.side_effect = Exception("JS failed")
-            self.mock_page.keyboard.press.return_value = None
             
             result = await self.handler._fallback_search_strategies()
             

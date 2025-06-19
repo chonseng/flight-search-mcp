@@ -28,6 +28,7 @@ rich==13.7.0
 
 # Data validation and serialization with settings management
 pydantic[email]==2.5.0
+pydantic-settings>=2.0.0
 
 # =============================================================================
 # LOGGING AND MONITORING

@@ -28,8 +28,8 @@ def serialize_for_json(obj: Any) -> Any:
     else:
         return str(obj)
 
-@mcp.tool
-async def search_flights(
+# Pure business logic functions (testable)
+async def search_flights_impl(
     origin: str,
     destination: str,
     departure_date: str,
@@ -38,7 +38,7 @@ async def search_flights(
     max_results: int = 10,
     headless: bool = True
 ) -> Dict[str, Any]:
-    """Search for flights using Google Flights scraper."""
+    """Core flight search business logic."""
     start_time = datetime.now()
     
     try:
@@ -130,9 +130,8 @@ async def search_flights(
         }
 
 
-@mcp.tool
-async def get_scraper_status() -> Dict[str, Any]:
-    """Check scraper health and configuration."""
+async def get_scraper_status_impl() -> Dict[str, Any]:
+    """Core scraper status check business logic."""
     try:
         logger.info("Checking scraper status")
         
@@ -176,6 +175,35 @@ async def get_scraper_status() -> Dict[str, Any]:
             "error": error_msg,
             "timestamp": datetime.now().isoformat()
         }
+
+
+# MCP tool wrappers
+@mcp.tool
+async def search_flights(
+    origin: str,
+    destination: str,
+    departure_date: str,
+    return_date: Optional[str] = None,
+    trip_type: str = "one_way",
+    max_results: int = 10,
+    headless: bool = True
+) -> Dict[str, Any]:
+    """Search for flights using Google Flights scraper."""
+    return await search_flights_impl(
+        origin=origin,
+        destination=destination,
+        departure_date=departure_date,
+        return_date=return_date,
+        trip_type=trip_type,
+        max_results=max_results,
+        headless=headless
+    )
+
+
+@mcp.tool
+async def get_scraper_status() -> Dict[str, Any]:
+    """Check scraper health and configuration."""
+    return await get_scraper_status_impl()
 
 def create_mcp_server() -> FastMCP:
     """Create and return the configured MCP server instance."""

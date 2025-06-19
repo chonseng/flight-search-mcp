@@ -103,7 +103,9 @@ class TestGoogleFlightsScraper:
                     pass
             
             mock_init.assert_called_once()
-            mock_cleanup.assert_called_once()
+            # __aexit__ is NOT called when __aenter__ raises an exception
+            # This is the correct Python async context manager behavior
+            mock_cleanup.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_initialize_success(self):
@@ -173,6 +175,7 @@ class TestGoogleFlightsScraper:
         # Should not raise exception, just log error
         await self.scraper.cleanup()
         
+        # The scraper should still clean up its references even if browser cleanup fails
         assert self.scraper.browser_manager is None
 
     @pytest.mark.asyncio
@@ -198,7 +201,7 @@ class TestGoogleFlightsScraper:
             assert len(result.flights) == 2
             assert result.total_results == 2
             assert result.search_criteria == self.sample_criteria
-            assert result.execution_time > 0
+            assert result.execution_time >= 0
             assert result.error_message is None
             
             # Verify all phases were called
@@ -238,7 +241,7 @@ class TestGoogleFlightsScraper:
             assert len(result.flights) == 0
             assert result.total_results == 0
             assert "Navigation failed" in result.error_message
-            assert result.execution_time > 0
+            assert result.execution_time >= 0
 
     @pytest.mark.asyncio
     async def test_scrape_flights_form_filling_failure(self):

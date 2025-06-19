@@ -127,6 +127,11 @@ class TimeoutError(ScrapingError):
     pass
 
 
+class NetworkError(ScrapingError):
+    """Exception for network-related errors."""
+    pass
+
+
 class SelectorFailureAlert(BaseModel):
     """Alert for selector failures requiring attention."""
     alert_id: str = Field(..., description="Unique identifier for this alert")

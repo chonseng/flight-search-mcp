@@ -259,21 +259,19 @@ class TestApplicationConfig:
 
     def test_env_file_loading(self):
         """Test loading from environment file."""
-        # Create temporary .env file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.env', delete=False) as f:
-            f.write("FLIGHT_SCRAPER_ENVIRONMENT=testing\n")
-            f.write("FLIGHT_SCRAPER_DEBUG=true\n")
-            f.write("FLIGHT_SCRAPER_TIMEOUT=25000\n")
-            env_file = f.name
+        # Test with environment variables instead of .env file
+        # since Pydantic v2 handles env files differently
+        env_vars = {
+            'FLIGHT_SCRAPER_ENVIRONMENT': 'testing',
+            'FLIGHT_SCRAPER_DEBUG': 'true',
+            'FLIGHT_SCRAPER_TIMEOUT': '25000'
+        }
         
-        try:
-            # Test loading with specific env file
-            with patch.object(ApplicationConfig.Config, 'env_file', env_file):
-                config = ApplicationConfig()
-                # Note: This test might not work exactly as expected due to 
-                # how pydantic handles env files, but the structure is correct
-        finally:
-            os.unlink(env_file)
+        with patch.dict(os.environ, env_vars):
+            config = ApplicationConfig()
+            assert config.environment == 'testing'
+            assert config.debug is True
+            assert config.scraper.timeout == 25000
 
 
 class TestGlobalConfigManagement:
@@ -405,15 +403,15 @@ class TestConfigurationIntegration:
         """Test configuration can be serialized and deserialized."""
         config = ApplicationConfig(environment="testing", debug=True)
         
-        # Test dict export
-        config_dict = config.dict()
+        # Test dict export (using model_dump instead of deprecated dict)
+        config_dict = config.model_dump()
         assert config_dict["environment"] == "testing"
         assert config_dict["debug"] is True
         assert "scraper" in config_dict
         assert "logging" in config_dict
         
-        # Test JSON serialization
-        config_json = config.json()
+        # Test JSON serialization (using model_dump_json instead of deprecated json)
+        config_json = config.model_dump_json()
         assert "testing" in config_json
         assert "scraper" in config_json
         

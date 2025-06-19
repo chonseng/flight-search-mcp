@@ -7,7 +7,7 @@ try:
     from pydantic_settings import BaseSettings
 except ImportError:
     from pydantic import BaseSettings
-from pydantic import Field, validator
+from pydantic import Field, field_validator, ConfigDict
 from pydantic.types import PositiveInt, PositiveFloat
 
 
@@ -43,10 +43,11 @@ class ScraperConfig(BaseSettings):
         description="Browser launch arguments for stealth mode"
     )
     
-    @validator('min_delay', 'max_delay')
-    def validate_delays(cls, v, values):
-        """Validate delay settings."""
-        if 'min_delay' in values and v < values['min_delay']:
+    @field_validator('max_delay')
+    @classmethod
+    def validate_max_delay(cls, v, info):
+        """Validate max_delay is greater than or equal to min_delay."""
+        if info.data and 'min_delay' in info.data and v < info.data['min_delay']:
             raise ValueError('max_delay must be greater than or equal to min_delay')
         return v
     
@@ -60,9 +61,10 @@ class ScraperConfig(BaseSettings):
         """Get delay range as tuple."""
         return (self.min_delay, self.max_delay)
 
-    class Config:
-        env_prefix = "FLIGHT_SCRAPER_"
-        case_sensitive = False
+    model_config = ConfigDict(
+        env_prefix="FLIGHT_SCRAPER_",
+        case_sensitive=False
+    )
 
 
 class GoogleFlightsConfig(BaseSettings):
@@ -86,9 +88,10 @@ class GoogleFlightsConfig(BaseSettings):
         description="Fallback URL when primary navigation fails"
     )
 
-    class Config:
-        env_prefix = "GOOGLE_FLIGHTS_"
-        case_sensitive = False
+    model_config = ConfigDict(
+        env_prefix="GOOGLE_FLIGHTS_",
+        case_sensitive=False
+    )
 
 
 class SelectorConfig(BaseSettings):
@@ -212,9 +215,10 @@ class SelectorConfig(BaseSettings):
         description="Selectors for flight price"
     )
 
-    class Config:
-        env_prefix = "SELECTORS_"
-        case_sensitive = False
+    model_config = ConfigDict(
+        env_prefix="SELECTORS_",
+        case_sensitive=False
+    )
 
 
 class LoggingConfig(BaseSettings):
@@ -231,7 +235,8 @@ class LoggingConfig(BaseSettings):
     console_output: bool = Field(default=True, description="Enable console output")
     file_output: bool = Field(default=True, description="Enable file output")
 
-    @validator('level')
+    @field_validator('level')
+    @classmethod
     def validate_level(cls, v):
         """Validate logging level."""
         valid_levels = ["TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL"]
@@ -239,9 +244,10 @@ class LoggingConfig(BaseSettings):
             raise ValueError(f"Invalid logging level. Must be one of: {valid_levels}")
         return v.upper()
 
-    class Config:
-        env_prefix = "LOGGING_"
-        case_sensitive = False
+    model_config = ConfigDict(
+        env_prefix="LOGGING_",
+        case_sensitive=False
+    )
 
 
 class OutputConfig(BaseSettings):
@@ -253,7 +259,8 @@ class OutputConfig(BaseSettings):
     include_debug_info: bool = Field(default=False, description="Include debug information in output")
     pretty_print: bool = Field(default=True, description="Pretty print JSON output")
 
-    @validator('default_format')
+    @field_validator('default_format')
+    @classmethod
     def validate_format(cls, v):
         """Validate output format."""
         valid_formats = ["json", "csv", "yaml", "xml"]
@@ -261,9 +268,10 @@ class OutputConfig(BaseSettings):
             raise ValueError(f"Invalid output format. Must be one of: {valid_formats}")
         return v.lower()
 
-    class Config:
-        env_prefix = "OUTPUT_"
-        case_sensitive = False
+    model_config = ConfigDict(
+        env_prefix="OUTPUT_",
+        case_sensitive=False
+    )
 
 
 class MCPConfig(BaseSettings):
@@ -276,9 +284,10 @@ class MCPConfig(BaseSettings):
     timeout: PositiveInt = Field(default=30, description="Request timeout in seconds")
     max_results_limit: PositiveInt = Field(default=50, description="Maximum results limit for MCP requests")
 
-    class Config:
-        env_prefix = "MCP_"
-        case_sensitive = False
+    model_config = ConfigDict(
+        env_prefix="MCP_",
+        case_sensitive=False
+    )
 
 
 class ApplicationConfig(BaseSettings):
@@ -296,7 +305,8 @@ class ApplicationConfig(BaseSettings):
     output: OutputConfig = Field(default_factory=OutputConfig)
     mcp: MCPConfig = Field(default_factory=MCPConfig)
 
-    @validator('environment')
+    @field_validator('environment')
+    @classmethod
     def validate_environment(cls, v):
         """Validate environment setting."""
         valid_envs = ["development", "testing", "staging", "production"]
@@ -304,11 +314,12 @@ class ApplicationConfig(BaseSettings):
             raise ValueError(f"Invalid environment. Must be one of: {valid_envs}")
         return v.lower()
 
-    class Config:
-        env_prefix = "FLIGHT_SCRAPER_"
-        case_sensitive = False
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = ConfigDict(
+        env_prefix="FLIGHT_SCRAPER_",
+        case_sensitive=False,
+        env_file=".env",
+        env_file_encoding="utf-8"
+    )
 
     def is_production(self) -> bool:
         """Check if running in production environment."""
