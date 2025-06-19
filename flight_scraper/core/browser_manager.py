@@ -128,25 +128,31 @@ class BrowserManager:
         
         This method is safe to call multiple times and handles partial cleanup scenarios.
         """
-        try:
-            logger.info("🧹 Starting browser cleanup...")
-            
-            if self.context:
+        logger.info("🧹 Starting browser cleanup...")
+        
+        # Clean up each resource individually, continuing even if one fails
+        if self.context:
+            try:
                 await self.context.close()
                 logger.debug("✅ Browser context closed")
+            except Exception as e:
+                logger.error(f"⚠️ Error closing browser context: {str(e)}")
                 
-            if self.browser:
+        if self.browser:
+            try:
                 await self.browser.close()
                 logger.debug("✅ Browser closed")
+            except Exception as e:
+                logger.error(f"⚠️ Error closing browser: {str(e)}")
                 
-            if self.playwright:
+        if self.playwright:
+            try:
                 await self.playwright.stop()
                 logger.debug("✅ Playwright stopped")
+            except Exception as e:
+                logger.error(f"⚠️ Error stopping Playwright: {str(e)}")
                 
-            logger.info("✅ Browser cleanup completed successfully")
-            
-        except Exception as e:
-            logger.error(f"⚠️ Error during browser cleanup: {str(e)}")
+        logger.info("✅ Browser cleanup completed successfully")
     
     def get_page(self) -> Page:
         """

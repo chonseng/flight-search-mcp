@@ -40,7 +40,7 @@ dependencies = [
     "pydantic[email]>=2.5.0",
     "pydantic-settings>=2.0.0",
     "loguru>=0.7.2",
-    "fastmcp>=0.2.0",
+    "fastmcp>=2.8.0",
 ]
 
 [project.optional-dependencies]
@@ -69,7 +69,7 @@ test = [
     "pytest-benchmark>=4.0.0",
 ]
 mcp = [
-    "fastmcp>=0.2.0",
+    "fastmcp>=2.8.0",
 ]
 docs = [
     "sphinx>=5.0.0",

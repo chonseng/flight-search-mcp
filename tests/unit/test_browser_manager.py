@@ -43,18 +43,22 @@ class TestBrowserManager:
     @pytest.mark.asyncio
     async def test_context_manager_init_failure(self):
         """Test async context manager with initialization failure."""
-        with patch.object(BrowserManager, 'initialize') as mock_init, \
-             patch.object(BrowserManager, 'cleanup') as mock_cleanup:
+        manager = BrowserManager(headless=True)
+        
+        with patch.object(manager, 'initialize') as mock_init, \
+             patch.object(manager, 'cleanup') as mock_cleanup:
             
             mock_init.side_effect = ScrapingError("Init failed")
             mock_cleanup.return_value = None
             
             with pytest.raises(ScrapingError, match="Init failed"):
-                async with BrowserManager(headless=True):
+                async with manager:
                     pass
             
             mock_init.assert_called_once()
-            mock_cleanup.assert_called_once()
+            # __aexit__ is NOT called when __aenter__ raises an exception
+            # This is the correct Python async context manager behavior
+            mock_cleanup.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_initialize_success(self):
@@ -134,7 +138,8 @@ class TestBrowserManager:
         mock_playwright.chromium = mock_chromium
         
         with patch('flight_scraper.core.browser_manager.async_playwright') as mock_async_playwright:
-            mock_async_playwright.return_value.start.return_value = mock_playwright
+            # Create a mock that returns an awaitable object with a start method
+            mock_async_playwright.return_value.start = AsyncMock(return_value=mock_playwright)
             
             with patch.object(manager, 'cleanup') as mock_cleanup:
                 with pytest.raises(ScrapingError, match="Browser initialization failed"):
@@ -195,6 +200,7 @@ class TestBrowserManager:
         # Should not raise exception, just log error
         await manager.cleanup()
         
+        # Verify all cleanup methods were attempted despite the context error
         mock_context.close.assert_called_once()
         mock_browser.close.assert_called_once()
         mock_playwright.stop.assert_called_once()
