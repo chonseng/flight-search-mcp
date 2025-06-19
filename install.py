@@ -23,35 +23,36 @@ def main():
     """Main installation process."""
     print("🛫 Google Flights Scraper Installation")
     print("=" * 50)
-    
+
     # Check Python version
     if sys.version_info < (3, 8):
         print("❌ Python 3.8 or higher is required")
         sys.exit(1)
-    
+
     print(f"✅ Python {sys.version_info.major}.{sys.version_info.minor} detected")
-    
+
     # Install Python dependencies
     if not run_command("pip install -r requirements.txt", "Installing Python dependencies"):
         print("❌ Failed to install Python dependencies")
         sys.exit(1)
-    
+
     # Install Playwright browsers
     if not run_command("playwright install chromium", "Installing Playwright browsers"):
         print("❌ Failed to install Playwright browsers")
         sys.exit(1)
-    
+
     # Test installation
     print("\n🧪 Testing installation...")
     try:
         import playwright
         import typer
         import loguru
+
         print("✅ All dependencies imported successfully")
     except ImportError as e:
         print(f"❌ Import error: {e}")
         sys.exit(1)
-    
+
     print("\n🎉 Installation completed successfully!")
     print("\nQuick start:")
     print("  python main.py example  # View usage examples")

@@ -1,17 +1,23 @@
 """Unit tests for centralized configuration management."""
 
-import pytest
 import os
-import tempfile
-from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 from pydantic import ValidationError
 
 from flight_scraper.core.config import (
-    ScraperConfig, GoogleFlightsConfig, SelectorConfig, LoggingConfig,
-    OutputConfig, MCPConfig, ApplicationConfig,
-    get_config, reload_config, set_config, get_legacy_config
+    ApplicationConfig,
+    GoogleFlightsConfig,
+    LoggingConfig,
+    MCPConfig,
+    OutputConfig,
+    ScraperConfig,
+    SelectorConfig,
+    get_config,
+    get_legacy_config,
+    reload_config,
+    set_config,
 )
 
 
@@ -21,7 +27,7 @@ class TestScraperConfig:
     def test_default_values(self):
         """Test default configuration values."""
         config = ScraperConfig()
-        
+
         assert "Mozilla/5.0" in config.user_agent
         assert config.viewport_width == 1366
         assert config.viewport_height == 768
@@ -31,19 +37,19 @@ class TestScraperConfig:
         assert config.retry_attempts == 3
         assert config.min_delay == 2.0
         assert config.max_delay == 5.0
-        assert '--no-sandbox' in config.browser_args
+        assert "--no-sandbox" in config.browser_args
 
     def test_viewport_property(self):
         """Test viewport property returns correct format."""
         config = ScraperConfig(viewport_width=1920, viewport_height=1080)
-        
+
         viewport = config.viewport
         assert viewport == {"width": 1920, "height": 1080}
 
     def test_delay_range_property(self):
         """Test delay_range property returns correct format."""
         config = ScraperConfig(min_delay=1.5, max_delay=3.5)
-        
+
         delay_range = config.delay_range
         assert delay_range == (1.5, 3.5)
 
@@ -56,16 +62,15 @@ class TestScraperConfig:
         """Test positive integer validation."""
         with pytest.raises(ValidationError):
             ScraperConfig(timeout=-1000)
-        
+
         with pytest.raises(ValidationError):
             ScraperConfig(viewport_width=0)
 
     def test_environment_variable_override(self):
         """Test environment variable override."""
-        with patch.dict(os.environ, {
-            'FLIGHT_SCRAPER_TIMEOUT': '45000',
-            'FLIGHT_SCRAPER_RETRY_ATTEMPTS': '5'
-        }):
+        with patch.dict(
+            os.environ, {"FLIGHT_SCRAPER_TIMEOUT": "45000", "FLIGHT_SCRAPER_RETRY_ATTEMPTS": "5"}
+        ):
             config = ScraperConfig()
             assert config.timeout == 45000
             assert config.retry_attempts == 5
@@ -77,7 +82,7 @@ class TestGoogleFlightsConfig:
     def test_default_urls(self):
         """Test default URL configurations."""
         config = GoogleFlightsConfig()
-        
+
         assert "google.com/travel/flights" in config.base_url
         assert "google.com/travel/flights" in config.round_trip_url
         assert "google.com/travel/flights/search" in config.search_url
@@ -85,13 +90,16 @@ class TestGoogleFlightsConfig:
 
     def test_environment_variable_override(self):
         """Test environment variable override for URLs."""
-        with patch.dict(os.environ, {
-            'GOOGLE_FLIGHTS_BASE_URL': 'https://custom.example.com',
-            'GOOGLE_FLIGHTS_FALLBACK_URL': 'https://fallback.example.com'
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "GOOGLE_FLIGHTS_BASE_URL": "https://custom.example.com",
+                "GOOGLE_FLIGHTS_FALLBACK_URL": "https://fallback.example.com",
+            },
+        ):
             config = GoogleFlightsConfig()
-            assert config.base_url == 'https://custom.example.com'
-            assert config.fallback_url == 'https://fallback.example.com'
+            assert config.base_url == "https://custom.example.com"
+            assert config.fallback_url == "https://fallback.example.com"
 
 
 class TestSelectorConfig:
@@ -100,7 +108,7 @@ class TestSelectorConfig:
     def test_default_selectors(self):
         """Test default selector configurations."""
         config = SelectorConfig()
-        
+
         assert len(config.from_input) > 0
         assert len(config.to_input) > 0
         assert len(config.search_button) > 0
@@ -110,12 +118,12 @@ class TestSelectorConfig:
     def test_flight_result_selectors(self):
         """Test flight result selector configurations."""
         config = SelectorConfig()
-        
+
         assert len(config.airline_name) > 0
         assert len(config.price) > 0
         assert len(config.duration) > 0
         assert len(config.stops) > 0
-        assert '.Ir0Voe' in config.airline_name
+        assert ".Ir0Voe" in config.airline_name
 
 
 class TestLoggingConfig:
@@ -124,7 +132,7 @@ class TestLoggingConfig:
     def test_default_logging_config(self):
         """Test default logging configuration."""
         config = LoggingConfig()
-        
+
         assert config.level == "INFO"
         assert "{time:" in config.format
         assert config.file == "flight_scraper.log"
@@ -156,7 +164,7 @@ class TestOutputConfig:
     def test_default_output_config(self):
         """Test default output configuration."""
         config = OutputConfig()
-        
+
         assert config.default_format == "json"
         assert config.csv_delimiter == ","
         assert config.max_results == 50
@@ -186,7 +194,7 @@ class TestMCPConfig:
     def test_default_mcp_config(self):
         """Test default MCP configuration."""
         config = MCPConfig()
-        
+
         assert config.host == "localhost"
         assert config.port == 8000
         assert config.use_stdio is False
@@ -198,7 +206,7 @@ class TestMCPConfig:
         """Test positive port validation."""
         with pytest.raises(ValidationError):
             MCPConfig(port=0)
-        
+
         with pytest.raises(ValidationError):
             MCPConfig(port=-8000)
 
@@ -209,7 +217,7 @@ class TestApplicationConfig:
     def test_default_application_config(self):
         """Test default application configuration."""
         config = ApplicationConfig()
-        
+
         assert config.environment == "development"
         assert config.debug is False
         assert isinstance(config.scraper, ScraperConfig)
@@ -239,7 +247,7 @@ class TestApplicationConfig:
         """Test environment helper methods."""
         dev_config = ApplicationConfig(environment="development")
         prod_config = ApplicationConfig(environment="production")
-        
+
         assert dev_config.is_development() is True
         assert dev_config.is_production() is False
         assert prod_config.is_development() is False
@@ -248,7 +256,7 @@ class TestApplicationConfig:
     def test_nested_config_access(self):
         """Test accessing nested configuration."""
         config = ApplicationConfig()
-        
+
         # Test that we can access nested configurations
         assert config.scraper.timeout == 30000
         assert config.google_flights.base_url.startswith("https://")
@@ -262,14 +270,14 @@ class TestApplicationConfig:
         # Test with environment variables instead of .env file
         # since Pydantic v2 handles env files differently
         env_vars = {
-            'FLIGHT_SCRAPER_ENVIRONMENT': 'testing',
-            'FLIGHT_SCRAPER_DEBUG': 'true',
-            'FLIGHT_SCRAPER_TIMEOUT': '25000'
+            "FLIGHT_SCRAPER_ENVIRONMENT": "testing",
+            "FLIGHT_SCRAPER_DEBUG": "true",
+            "FLIGHT_SCRAPER_TIMEOUT": "25000",
         }
-        
+
         with patch.dict(os.environ, env_vars):
             config = ApplicationConfig()
-            assert config.environment == 'testing'
+            assert config.environment == "testing"
             assert config.debug is True
             assert config.scraper.timeout == 25000
 
@@ -281,14 +289,14 @@ class TestGlobalConfigManagement:
         """Test get_config returns singleton instance."""
         config1 = get_config()
         config2 = get_config()
-        
+
         assert config1 is config2
 
     def test_reload_config(self):
         """Test reload_config creates new instance."""
         config1 = get_config()
         config2 = reload_config()
-        
+
         assert config1 is not config2
         assert isinstance(config2, ApplicationConfig)
 
@@ -296,36 +304,36 @@ class TestGlobalConfigManagement:
         """Test set_config for testing purposes."""
         custom_config = ApplicationConfig(environment="testing", debug=True)
         set_config(custom_config)
-        
+
         retrieved_config = get_config()
         assert retrieved_config is custom_config
         assert retrieved_config.environment == "testing"
         assert retrieved_config.debug is True
-        
+
         # Reset to default
         reload_config()
 
     def test_get_legacy_config(self):
         """Test legacy configuration format."""
         legacy_config = get_legacy_config()
-        
+
         assert "SCRAPER_CONFIG" in legacy_config
         assert "GOOGLE_FLIGHTS_URLS" in legacy_config
         assert "SELECTORS" in legacy_config
         assert "LOG_CONFIG" in legacy_config
         assert "OUTPUT_CONFIG" in legacy_config
-        
+
         # Test structure matches legacy format
         scraper_config = legacy_config["SCRAPER_CONFIG"]
         assert "user_agent" in scraper_config
         assert "viewport" in scraper_config
         assert "timeout" in scraper_config
-        
+
         urls_config = legacy_config["GOOGLE_FLIGHTS_URLS"]
         assert "base" in urls_config
         assert "round_trip" in urls_config
         assert "search" in urls_config
-        
+
         selectors_config = legacy_config["SELECTORS"]
         assert "from_input" in selectors_config
         assert "to_input" in selectors_config
@@ -338,26 +346,26 @@ class TestConfigurationIntegration:
     def test_config_with_environment_variables(self):
         """Test configuration with various environment variables."""
         env_vars = {
-            'FLIGHT_SCRAPER_ENVIRONMENT': 'production',
-            'FLIGHT_SCRAPER_DEBUG': 'true',
-            'FLIGHT_SCRAPER_TIMEOUT': '45000',
-            'FLIGHT_SCRAPER_RETRY_ATTEMPTS': '5',
-            'GOOGLE_FLIGHTS_BASE_URL': 'https://custom.google.com',
-            'LOGGING_LEVEL': 'DEBUG',
-            'OUTPUT_DEFAULT_FORMAT': 'csv',
-            'MCP_PORT': '9000'
+            "FLIGHT_SCRAPER_ENVIRONMENT": "production",
+            "FLIGHT_SCRAPER_DEBUG": "true",
+            "FLIGHT_SCRAPER_TIMEOUT": "45000",
+            "FLIGHT_SCRAPER_RETRY_ATTEMPTS": "5",
+            "GOOGLE_FLIGHTS_BASE_URL": "https://custom.google.com",
+            "LOGGING_LEVEL": "DEBUG",
+            "OUTPUT_DEFAULT_FORMAT": "csv",
+            "MCP_PORT": "9000",
         }
-        
+
         with patch.dict(os.environ, env_vars):
             config = ApplicationConfig()
-            
-            assert config.environment == 'production'
+
+            assert config.environment == "production"
             assert config.debug is True
             assert config.scraper.timeout == 45000
             assert config.scraper.retry_attempts == 5
-            assert config.google_flights.base_url == 'https://custom.google.com'
-            assert config.logging.level == 'DEBUG'
-            assert config.output.default_format == 'csv'
+            assert config.google_flights.base_url == "https://custom.google.com"
+            assert config.logging.level == "DEBUG"
+            assert config.output.default_format == "csv"
             assert config.mcp.port == 9000
 
     def test_config_validation_errors(self):
@@ -365,15 +373,15 @@ class TestConfigurationIntegration:
         # Test invalid timeout
         with pytest.raises(ValidationError):
             ScraperConfig(timeout=-1000)
-        
+
         # Test invalid environment
         with pytest.raises(ValidationError):
             ApplicationConfig(environment="invalid_env")
-        
+
         # Test invalid logging level
         with pytest.raises(ValidationError):
             LoggingConfig(level="INVALID_LEVEL")
-        
+
         # Test invalid output format
         with pytest.raises(ValidationError):
             OutputConfig(default_format="invalid_format")
@@ -382,19 +390,17 @@ class TestConfigurationIntegration:
         """Test partial configuration override."""
         custom_scraper = ScraperConfig(timeout=60000, retry_attempts=10)
         custom_logging = LoggingConfig(level="DEBUG", console_output=False)
-        
+
         config = ApplicationConfig(
-            environment="testing",
-            scraper=custom_scraper,
-            logging=custom_logging
+            environment="testing", scraper=custom_scraper, logging=custom_logging
         )
-        
+
         assert config.environment == "testing"
         assert config.scraper.timeout == 60000
         assert config.scraper.retry_attempts == 10
         assert config.logging.level == "DEBUG"
         assert config.logging.console_output is False
-        
+
         # Other configs should use defaults
         assert config.output.default_format == "json"
         assert config.mcp.port == 8000
@@ -402,19 +408,19 @@ class TestConfigurationIntegration:
     def test_config_serialization(self):
         """Test configuration can be serialized and deserialized."""
         config = ApplicationConfig(environment="testing", debug=True)
-        
+
         # Test dict export (using model_dump instead of deprecated dict)
         config_dict = config.model_dump()
         assert config_dict["environment"] == "testing"
         assert config_dict["debug"] is True
         assert "scraper" in config_dict
         assert "logging" in config_dict
-        
+
         # Test JSON serialization (using model_dump_json instead of deprecated json)
         config_json = config.model_dump_json()
         assert "testing" in config_json
         assert "scraper" in config_json
-        
+
         # Test recreation from dict
         new_config = ApplicationConfig(**config_dict)
         assert new_config.environment == "testing"

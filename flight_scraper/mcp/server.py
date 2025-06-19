@@ -4,8 +4,6 @@ This module provides a clean, maintainable MCP server implementation.
 """
 
 import asyncio
-import json
-import time
 from datetime import datetime
 from typing import Any, Dict, Optional
 
@@ -13,20 +11,22 @@ from fastmcp import FastMCP
 from loguru import logger
 
 from ..core.scraper import scrape_flights_async
-from ..core.models import TripType, SearchCriteria
+
 # Initialize FastMCP server
 mcp = FastMCP("Google Flights Scraper")
+
 
 def serialize_for_json(obj: Any) -> Any:
     """Convert objects to JSON-serializable format."""
     if isinstance(obj, datetime):
         return obj.isoformat()
-    elif hasattr(obj, 'model_dump'):
+    elif hasattr(obj, "model_dump"):
         return obj.model_dump()
-    elif hasattr(obj, 'dict'):
+    elif hasattr(obj, "dict"):
         return obj.dict()
     else:
         return str(obj)
+
 
 # Pure business logic functions (testable)
 async def search_flights_impl(
@@ -36,24 +36,21 @@ async def search_flights_impl(
     return_date: Optional[str] = None,
     trip_type: str = "one_way",
     max_results: int = 10,
-    headless: bool = True
+    headless: bool = True,
 ) -> Dict[str, Any]:
     """Core flight search business logic."""
     start_time = datetime.now()
-    
+
     try:
         logger.info(f"Flight search: {origin} -> {destination} on {departure_date}")
-        
+
         # Use airport codes directly without normalization
         origin_code = origin.strip().upper()
         destination_code = destination.strip().upper()
-        
+
         if not origin_code or not destination_code:
-            return {
-                "success": False,
-                "error": "Invalid airport codes provided"
-            }
-        
+            return {"success": False, "error": "Invalid airport codes provided"}
+
         # Parse dates
         try:
             departure_date_obj = datetime.strptime(departure_date, "%Y-%m-%d").date()
@@ -63,16 +60,16 @@ async def search_flights_impl(
         except ValueError as e:
             return {
                 "success": False,
-                "error": f"Invalid date format: {str(e)}. Use YYYY-MM-DD format."
+                "error": f"Invalid date format: {str(e)}. Use YYYY-MM-DD format.",
             }
-        
+
         # Validate trip type
         if trip_type not in ["one_way", "round_trip"]:
             return {
                 "success": False,
-                "error": "Invalid trip_type. Must be 'one_way' or 'round_trip'"
+                "error": "Invalid trip_type. Must be 'one_way' or 'round_trip'",
             }
-        
+
         # Perform flight search
         result = await scrape_flights_async(
             origin=origin_code,
@@ -80,9 +77,9 @@ async def search_flights_impl(
             departure_date=departure_date_obj,
             return_date=return_date_obj,
             max_results=min(max_results, 50),
-            headless=headless
+            headless=headless,
         )
-        
+
         # Serialize flight data
         flights_data = []
         for flight in result.flights:
@@ -92,89 +89,87 @@ async def search_flights_impl(
                 if "scraped_at" in segment:
                     segment["scraped_at"] = serialize_for_json(segment.get("scraped_at"))
             flights_data.append(flight_dict)
-        
+
         execution_time = (datetime.now() - start_time).total_seconds()
-        
+
         response = {
             "success": result.success,
             "search_criteria": {
                 "origin": result.search_criteria.origin,
                 "destination": result.search_criteria.destination,
                 "departure_date": result.search_criteria.departure_date.isoformat(),
-                "return_date": result.search_criteria.return_date.isoformat() if result.search_criteria.return_date else None,
+                "return_date": (
+                    result.search_criteria.return_date.isoformat()
+                    if result.search_criteria.return_date
+                    else None
+                ),
                 "trip_type": result.search_criteria.trip_type.value,
-                "max_results": result.search_criteria.max_results
+                "max_results": result.search_criteria.max_results,
             },
             "flights": flights_data,
             "total_results": result.total_results,
             "scraped_at": serialize_for_json(result.scraped_at),
             "execution_time": result.execution_time,
-            "mcp_execution_time": execution_time
+            "mcp_execution_time": execution_time,
         }
-        
+
         if not result.success and result.error_message:
             response["error"] = result.error_message
-        
-        logger.info(f"Flight search completed: {result.total_results} flights in {execution_time:.2f}s")
+
+        logger.info(
+            f"Flight search completed: {result.total_results} flights in {execution_time:.2f}s"
+        )
         return response
-        
+
     except Exception as e:
         execution_time = (datetime.now() - start_time).total_seconds()
         error_msg = f"Flight search failed: {str(e)}"
         logger.error(error_msg)
-        
-        return {
-            "success": False,
-            "error": error_msg,
-            "execution_time": execution_time
-        }
+
+        return {"success": False, "error": error_msg, "execution_time": execution_time}
 
 
 async def get_scraper_status_impl() -> Dict[str, Any]:
     """Core scraper status check business logic."""
     try:
         logger.info("Checking scraper status")
-        
+
         # Test browser initialization
         from ..core.scraper import GoogleFlightsScraper
-        
+
         browser_test_success = True
         browser_error = None
-        
+
         try:
             async with GoogleFlightsScraper(headless=True) as scraper:
                 await asyncio.sleep(0.1)
         except Exception as e:
             browser_test_success = False
             browser_error = str(e)
-        
+
         status = {
             "success": True,
             "scraper_status": {
                 "browser_test": browser_test_success,
                 "browser_error": browser_error,
-                "available_tools": ["search_flights", "get_scraper_status"]
+                "available_tools": ["search_flights", "get_scraper_status"],
             },
             "supported_features": {
                 "trip_types": ["one_way", "round_trip"],
                 "max_results_limit": 50,
-                "async_operation": True
+                "async_operation": True,
             },
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
-        
+
         logger.info("Scraper status check completed")
         return status
-        
+
     except Exception as e:
         error_msg = f"Scraper status check failed: {str(e)}"
         logger.error(error_msg)
-        
-        return {
-            "success": False,
-            "error": error_msg,
-            "timestamp": datetime.now().isoformat()
-        }
+
+        return {"success": False, "error": error_msg, "timestamp": datetime.now().isoformat()}
 
 
 # MCP tool wrappers
@@ -186,7 +181,7 @@ async def search_flights(
     return_date: Optional[str] = None,
     trip_type: str = "one_way",
     max_results: int = 10,
-    headless: bool = True
+    headless: bool = True,
 ) -> Dict[str, Any]:
     """Search for flights using Google Flights scraper."""
     return await search_flights_impl(
@@ -196,7 +191,7 @@ async def search_flights(
         return_date=return_date,
         trip_type=trip_type,
         max_results=max_results,
-        headless=headless
+        headless=headless,
     )
 
 
@@ -205,10 +200,12 @@ async def get_scraper_status() -> Dict[str, Any]:
     """Check scraper health and configuration."""
     return await get_scraper_status_impl()
 
+
 def create_mcp_server() -> FastMCP:
     """Create and return the configured MCP server instance."""
     logger.info("Creating MCP server for Google Flights scraper")
     return mcp
+
 
 async def run_server(host: str = "localhost", port: int = 8000, use_stdio: bool = False) -> None:
     """Run the MCP server."""
@@ -223,23 +220,24 @@ async def run_server(host: str = "localhost", port: int = 8000, use_stdio: bool 
         logger.error(f"Failed to start MCP server: {str(e)}")
         raise
 
+
 if __name__ == "__main__":
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="Google Flights MCP Server")
     parser.add_argument("--host", default="localhost", help="Host to bind to")
     parser.add_argument("--port", type=int, default=8000, help="Port to bind to")
     parser.add_argument("--stdio", action="store_true", help="Use stdio mode")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
-    
+
     args = parser.parse_args()
-    
+
     if args.debug:
         logger.remove()
         logger.add(lambda msg: print(msg, end=""), level="DEBUG")
-    
+
     logger.info("Google Flights MCP Server starting...")
-    
+
     try:
         asyncio.run(run_server(host=args.host, port=args.port, use_stdio=args.stdio))
     except KeyboardInterrupt:
