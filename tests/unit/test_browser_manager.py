@@ -80,7 +80,10 @@ class TestBrowserManager:
         mock_context.new_page.return_value = mock_page
         
         with patch('flight_scraper.core.browser_manager.async_playwright') as mock_async_playwright:
-            mock_async_playwright.return_value.start.return_value = mock_playwright
+            # Create a proper mock for async_playwright() that returns an object with start()
+            mock_playwright_instance = Mock()
+            mock_playwright_instance.start = AsyncMock(return_value=mock_playwright)
+            mock_async_playwright.return_value = mock_playwright_instance
             
             await manager.initialize()
             

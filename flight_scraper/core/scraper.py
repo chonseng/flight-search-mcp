@@ -137,22 +137,23 @@ class GoogleFlightsScraper:
         proper resource deallocation. This method is safe to call
         multiple times and handles partial cleanup scenarios.
         """
-        try:
-            logger.info("🧹 Starting scraper cleanup...")
-            
-            # Clear component references
-            self.data_extractor = None
-            self.form_handler = None
-            
-            # Clean up browser manager (handles browser resources)
-            if self.browser_manager:
+        logger.info("🧹 Starting scraper cleanup...")
+        
+        # Clear component references
+        self.data_extractor = None
+        self.form_handler = None
+        
+        # Clean up browser manager (handles browser resources)
+        if self.browser_manager:
+            try:
                 await self.browser_manager.cleanup()
+            except Exception as e:
+                logger.error(f"⚠️ Error during browser cleanup: {str(e)}")
+            finally:
+                # Always clear the reference even if cleanup fails
                 self.browser_manager = None
                 
-            logger.info("✅ Scraper cleanup completed successfully")
-            
-        except Exception as e:
-            logger.error(f"⚠️ Error during scraper cleanup: {str(e)}")
+        logger.info("✅ Scraper cleanup completed successfully")
     
     async def scrape_flights(self, criteria: SearchCriteria) -> ScrapingResult:
         """
