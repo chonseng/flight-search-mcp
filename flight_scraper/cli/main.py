@@ -93,6 +93,7 @@ def save_to_json(result: ScrapingResult, filename: str) -> None:
             "currency": flight.currency,
             "stops": flight.stops,
             "total_duration": flight.total_duration,
+            "booking_link": flight.booking_link,
             "segments": [],
         }
 

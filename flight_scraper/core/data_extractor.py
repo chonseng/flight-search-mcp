@@ -280,6 +280,7 @@ class DataExtractor:
             duration = await self._extract_duration_robust(element)
             stops = await self._extract_stops_robust(element)
             departure_time, arrival_time = await self._extract_times_robust(element)
+            booking_link = self.page.url
 
             # Create flight segment with extracted data
             segment = FlightSegment(
@@ -293,7 +294,8 @@ class DataExtractor:
 
             # Create complete flight offer
             flight_offer = FlightOffer(
-                price=price, stops=stops, total_duration=duration, segments=[segment]
+                price=price, stops=stops, total_duration=duration, segments=[segment],
+                booking_link=booking_link
             )
 
             return flight_offer
