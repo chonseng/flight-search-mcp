@@ -71,13 +71,6 @@ Run these checks before committing:
 ```bash
 # Format code
 black flight_scraper/ tests/
-isort flight_scraper/ tests/
-
-# Lint code
-flake8 flight_scraper/ tests/
-
-# Type checking
-mypy flight_scraper/
 
 # Security checks
 bandit -r flight_scraper/
@@ -107,29 +100,13 @@ pre-commit autoupdate
 ### Formatting
 
 - **Black**: Code formatter with 100-character line limit
-- **isort**: Import statement sorting
 
 ```bash
 # Auto-format code
 black --line-length=100 flight_scraper/ tests/
-isort flight_scraper/ tests/
 
 # Check formatting without changes
 black --check --line-length=100 flight_scraper/
-isort --check-only flight_scraper/
-```
-
-### Linting
-
-- **Flake8**: PEP 8 compliance and error detection
-- **Configuration**: See [`pyproject.toml`](pyproject.toml:98)
-
-```ini
-# .flake8 settings
-[flake8]
-max-line-length = 100
-ignore = E203, W503, E501
-exclude = .git,__pycache__,venv,build,dist
 ```
 
 ### Type Checking
@@ -284,9 +261,6 @@ Our CI pipeline runs on every push and PR:
 
 1. **Code Quality**
    - Black formatting check
-   - isort import sorting
-   - Flake8 linting
-   - MyPy type checking
 
 2. **Security**
    - Bandit security analysis
@@ -308,9 +282,6 @@ Our CI pipeline runs on every push and PR:
 
 # Or individual steps
 black --check flight_scraper/ tests/
-isort --check-only flight_scraper/ tests/
-flake8 flight_scraper/ tests/
-mypy flight_scraper/
 bandit -r flight_scraper/
 safety check
 pytest tests/unit/ --cov=flight_scraper --cov-fail-under=85
@@ -322,7 +293,7 @@ pytest tests/unit/ --cov=flight_scraper --cov-fail-under=85
 
 - [ ] All tests pass locally
 - [ ] Code coverage ≥ 85%
-- [ ] Code formatted with Black and isort
+- [ ] Code formatted with Black
 - [ ] No linting errors
 - [ ] Type checking passes
 - [ ] Security checks pass
@@ -484,7 +455,7 @@ for name, selector in ROBUST_SELECTORS.items():
 
 Before submitting your contribution:
 
-- [ ] Code follows style guidelines (Black, isort, flake8)
+- [ ] Code follows style guidelines (Black)
 - [ ] Type hints added for public APIs
 - [ ] Tests added with ≥85% coverage
 - [ ] Documentation updated

@@ -27,9 +27,6 @@ mcp_requirements = []
 dev_tools = {
     "pytest",
     "black",
-    "flake8",
-    "mypy",
-    "isort",
     "safety",
     "bandit",
     "pre-commit",
@@ -127,10 +124,6 @@ setup(
         ],
         "lint": [
             "black>=23.0.0",
-            "flake8>=6.0.0",
-            "isort>=5.12.0",
-            "mypy>=1.0.0",
-            "types-python-dateutil>=2.8.0",
         ],
         "security": [
             "safety>=2.3.0",
@@ -147,7 +140,6 @@ setup(
     include_package_data=True,
     package_data={
         "flight_scraper": [
-            "py.typed",  # Mark as typed package
             "core/selectors/*.json",  # Future selector definitions
             "config/*.yml",  # Future config templates
         ],

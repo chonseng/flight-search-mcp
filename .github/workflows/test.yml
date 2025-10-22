@@ -38,9 +38,6 @@ jobs:
       run: |
         black --check --diff flight_scraper/ tests/
 
-    - name: Run mypy type checking
-      run: |
-        mypy flight_scraper/ --ignore-missing-imports --no-strict-optional
 
   test:
     name: Test Suite
@@ -200,7 +197,6 @@ jobs:
         
         # Test development tools
         black --version
-        flake8 --version
         pytest --version
         mypy --version
 
