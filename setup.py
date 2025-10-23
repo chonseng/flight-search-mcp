@@ -12,8 +12,8 @@ with open(readme_file, "r", encoding="utf-8") as fh:
 requirements_file = Path(__file__).parent / "requirements.txt"
 with open(requirements_file, "r", encoding="utf-8") as fh:
     all_requirements = [
-        line.strip() 
-        for line in fh 
+        line.strip()
+        for line in fh
         if line.strip() and not line.startswith("#") and not line.startswith("-")
     ]
 
@@ -25,8 +25,14 @@ mcp_requirements = []
 
 # Development tools that should be in dev extras
 dev_tools = {
-    "pytest", "black", "flake8", "mypy", "isort", "safety", 
-    "bandit", "pre-commit", "commitizen", "build", "twine"
+    "pytest",
+    "black",
+    "safety",
+    "bandit",
+    "pre-commit",
+    "commitizen",
+    "build",
+    "twine",
 }
 
 # Documentation tools
@@ -37,7 +43,7 @@ mcp_tools = {"fastmcp"}
 
 for req in all_requirements:
     req_name = req.split(">=")[0].split("==")[0].split("[")[0]
-    
+
     if any(tool in req_name for tool in dev_tools):
         dev_requirements.append(req)
     elif any(tool in req_name for tool in doc_tools):
@@ -85,9 +91,25 @@ setup(
         "Framework :: Pydantic",
     ],
     keywords=[
-        "google", "flights", "scraper", "playwright", "web", "automation", 
-        "mcp", "server", "travel", "booking", "airline", "price", "monitoring",
-        "async", "browser", "selenium", "beautifulsoup", "data", "extraction"
+        "google",
+        "flights",
+        "scraper",
+        "playwright",
+        "web",
+        "automation",
+        "mcp",
+        "server",
+        "travel",
+        "booking",
+        "airline",
+        "price",
+        "monitoring",
+        "async",
+        "browser",
+        "selenium",
+        "beautifulsoup",
+        "data",
+        "extraction",
     ],
     python_requires=">=3.8",
     install_requires=core_requirements,
@@ -95,17 +117,13 @@ setup(
         "dev": dev_requirements + doc_requirements,
         "test": [
             "pytest>=7.0.0",
-            "pytest-asyncio>=0.21.0", 
+            "pytest-asyncio>=0.21.0",
             "pytest-cov>=4.0.0",
             "pytest-mock>=3.10.0",
             "pytest-benchmark>=4.0.0",
         ],
         "lint": [
             "black>=23.0.0",
-            "flake8>=6.0.0",
-            "isort>=5.12.0",
-            "mypy>=1.0.0",
-            "types-python-dateutil>=2.8.0",
         ],
         "security": [
             "safety>=2.3.0",
@@ -122,20 +140,16 @@ setup(
     include_package_data=True,
     package_data={
         "flight_scraper": [
-            "py.typed",  # Mark as typed package
             "core/selectors/*.json",  # Future selector definitions
             "config/*.yml",  # Future config templates
         ],
     },
     zip_safe=False,
-    
     # Enhanced metadata
     platforms=["any"],
     license="MIT",
-    
     # Test configuration
     test_suite="tests",
-    
     # Additional build configuration
     options={
         "egg_info": {
@@ -143,23 +157,23 @@ setup(
             "tag_date": False,
         },
     },
-    
     # Dependency management
     dependency_links=[],
-    
 )
 
 # Post-install message
-print("""
-🎉 Flight Search MCP installation complete!
+print(
+    """
+Flight Search MCP installation complete!
 
-📋 Next steps:
+Next steps:
 1. Install Playwright browsers: playwright install chromium
 2. Run tests: pytest tests/
-3. Check installation: python -c "import flight_scraper; print('✅ Ready!')"
+3. Check installation: python -c "import flight_scraper; print('Ready!')"
 
-📖 Documentation: https://github.com/chonseng/flight-search-mcp/wiki
-🐛 Issues: https://github.com/chonseng/flight-search-mcp/issues
+Documentation: https://github.com/chonseng/flight-search-mcp/wiki
+Issues: https://github.com/chonseng/flight-search-mcp/issues
 
-🚀 Happy scraping!
-""")
+Happy scraping!
+"""
+)

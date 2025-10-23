@@ -7,7 +7,7 @@ name = "flight-search-mcp"
 version = "2.0.0"
 description = "A comprehensive flight search scraper with MCP server support"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
     {name = "Flight Scraper Team", email = "contact@flightscraper.com"}
@@ -18,12 +18,10 @@ keywords = [
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
-    "Intended Audience :: Developers", 
+    "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9", 
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -35,26 +33,24 @@ classifiers = [
 dependencies = [
     "playwright>=1.40.0",
     "beautifulsoup4>=4.12.2",
-    "lxml>=4.9.3", 
+    "lxml>=4.9.3",
     "python-dateutil>=2.8.2",
     "typer>=0.9.0",
     "rich>=13.7.0",
     "pydantic[email]>=2.5.0",
+    "pydantic-settings>=2.0.0",
     "loguru>=0.7.2",
+    "fastmcp>=2.8.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
-    "pytest-cov>=4.0.0", 
+    "pytest-cov>=4.0.0",
     "pytest-mock>=3.10.0",
     "pytest-benchmark>=4.0.0",
     "black>=23.0.0",
-    "flake8>=6.0.0",
-    "isort>=5.12.0",
-    "mypy>=1.0.0",
-    "types-python-dateutil>=2.8.0",
     "safety>=2.3.0",
     "bandit>=1.7.0",
     "pre-commit>=3.0.0",
@@ -69,7 +65,7 @@ test = [
     "pytest-benchmark>=4.0.0",
 ]
 mcp = [
-    "fastmcp>=0.2.0",
+    "fastmcp>=2.8.0",
 ]
 docs = [
     "sphinx>=5.0.0",
@@ -92,13 +88,11 @@ where = ["."]
 include = ["flight_scraper*"]
 exclude = ["tests*", "examples*", "docs*"]
 
-[tool.setuptools.package-data]
-flight_scraper = ["py.typed"]
 
 # Black configuration
 [tool.black]
 line-length = 100
-target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
+target-version = ['py310', 'py311', 'py312']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
@@ -106,7 +100,6 @@ extend-exclude = '''
   \.eggs
   | \.git
   | \.hg
-  | \.mypy_cache
   | \.tox
   | \.venv
   | build
@@ -114,44 +107,8 @@ extend-exclude = '''
   | htmlcov
 )/
 '''
-
-# isort configuration
-[tool.isort]
-profile = "black"
-line_length = 100
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
-ensure_newline_before_comments = true
 skip_glob = ["**/.venv/*", "**/venv/*", "**/env/*"]
 
-# MyPy configuration
-[tool.mypy]
-python_version = "3.8"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-check_untyped_defs = true
-disallow_untyped_decorators = false
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
-strict_equality = true
-show_error_codes = true
-
-[[tool.mypy.overrides]]
-module = [
-    "playwright.*",
-    "fastmcp.*",
-    "loguru.*",
-    "rich.*",
-    "typer.*",
-]
-ignore_missing_imports = true
 
 # Coverage configuration
 [tool.coverage.run]

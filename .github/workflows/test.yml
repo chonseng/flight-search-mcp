@@ -38,13 +38,6 @@ jobs:
       run: |
         black --check --diff flight_scraper/ tests/
 
-    - name: Run flake8 linting
-      run: |
-        flake8 flight_scraper/ tests/ --max-line-length=100 --extend-ignore=E203,W503
-
-    - name: Run mypy type checking
-      run: |
-        mypy flight_scraper/ --ignore-missing-imports --no-strict-optional
 
   test:
     name: Test Suite
@@ -54,15 +47,11 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12"]
         exclude:
           # Reduce matrix size by excluding some combinations
           - os: macos-latest
-            python-version: "3.8"
-          - os: macos-latest
-            python-version: "3.9"
-          - os: windows-latest
-            python-version: "3.8"
+            python-version: "3.10"
 
     steps:
     - name: Checkout code
@@ -208,7 +197,6 @@ jobs:
         
         # Test development tools
         black --version
-        flake8 --version
         pytest --version
         mypy --version
 

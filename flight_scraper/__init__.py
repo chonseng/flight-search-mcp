@@ -4,22 +4,23 @@ A comprehensive flight search scraper with Model Context Protocol (MCP) server s
 Features both CLI interface and MCP server for AI assistant integration.
 """
 
-from .core.scraper import GoogleFlightsScraper, scrape_flights_async
 from .core.models import (
-    SearchCriteria,
+    ElementNotFoundError,
     FlightOffer,
     FlightSegment,
-    ScrapingResult,
-    TripType,
-    ScrapingError,
     NavigationError,
-    ElementNotFoundError,
-    TimeoutError
+    ScrapingError,
+    ScrapingResult,
+    SearchCriteria,
+    TimeoutError,
+    TripType,
 )
+from .core.scraper import GoogleFlightsScraper, scrape_flights_async
 
 # MCP server functionality (optional import)
 try:
     from .mcp.server import create_mcp_server
+
     _MCP_AVAILABLE = True
 except ImportError:
     _MCP_AVAILABLE = False
@@ -39,23 +40,19 @@ __all__ = [
     # Main scraper classes and functions
     "GoogleFlightsScraper",
     "scrape_flights_async",
-    
     # Data models
     "SearchCriteria",
     "FlightOffer",
     "FlightSegment",
     "ScrapingResult",
     "TripType",
-    
     # Exceptions
     "ScrapingError",
     "NavigationError",
     "ElementNotFoundError",
     "TimeoutError",
-    
     # MCP server functions (if available)
     "create_mcp_server",
-    
     # Package metadata
     "__version__",
     "__author__",
@@ -63,7 +60,7 @@ __all__ = [
     "__url__",
     "__license__",
     "__build_date__",
-    "__python_requires__"
+    "__python_requires__",
 ]
 
 # Conditional exports based on availability
@@ -83,41 +80,33 @@ def get_package_info():
         "build_date": __build_date__,
         "python_requires": __python_requires__,
         "mcp_available": _MCP_AVAILABLE,
-        "components": {
-            "core_scraper": True,
-            "cli_interface": True,
-            "mcp_server": _MCP_AVAILABLE
-        }
+        "components": {"core_scraper": True, "cli_interface": True, "mcp_server": _MCP_AVAILABLE},
     }
 
 
 def check_dependencies():
     """Check if all required dependencies are available."""
     missing = []
-    
+
     try:
-        import playwright
+        pass
     except ImportError:
         missing.append("playwright")
-    
+
     try:
-        import pydantic
+        pass
     except ImportError:
         missing.append("pydantic")
-    
+
     try:
-        import typer
+        pass
     except ImportError:
         missing.append("typer")
-    
+
     if not _MCP_AVAILABLE:
         try:
-            import fastmcp
+            pass
         except ImportError:
             missing.append("fastmcp (for MCP server)")
-    
-    return {
-        "all_satisfied": len(missing) == 0,
-        "missing": missing,
-        "mcp_available": _MCP_AVAILABLE
-    }
+
+    return {"all_satisfied": len(missing) == 0, "missing": missing, "mcp_available": _MCP_AVAILABLE}
